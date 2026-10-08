@@ -22,7 +22,8 @@
   .tour-screen .match-players{margin-bottom:11px}
   .tour-screen .result-btn{min-height:50px}
   .tour-screen .round-footer{position:sticky;bottom:calc(67px + env(safe-area-inset-bottom));background:var(--bg);padding:9px 0;z-index:4}
-  .tour-screen .footnote,.tour-screen~.page-footer{display:none}
+  .tour-screen .footnote{font-size:10px;margin-top:12px}
+  .tour-screen~.page-footer{display:none}
   body:has(.tour-screen) .topbar{height:58px;margin-bottom:10px}
   body:has(.tour-screen) .main{padding-top:0}
   body:has(.tour-screen) .save-state{max-width:85px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
