@@ -1,0 +1,262 @@
+import { RESULTS, TIEBREAKS, uid, fmt, clone, createTournament, statistics, roundCount, addRound, closeRound, rollback, setResult, validateTournament } from './engine.js';
+import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
+
+const paths = {
+  cup: '<path d="M8 3h8v5a4 4 0 0 1-8 0V3Z"/><path d="M8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 1v6m-4 3h8m-6-3h4"/>',
+  people: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-15a3 3 0 0 1 0 6m1 3a5 5 0 0 1 4 5"/>',
+  chart: '<path d="M4 19V5m0 14h17M8 15l4-5 4 2 4-7"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  back: '<path d="M19 12H5m6-6-6 6 6 6"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/>',
+  upload: '<path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/>',
+  check: '<path d="m5 12 4 4L19 6"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  undo: '<path d="M4 9h10a6 6 0 0 1 0 12m-5-7L4 9l5-5"/>',
+  more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/>',
+  settings: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/>',
+  trash: '<path d="M4 6h16M9 3h6m-9 3 1 14h10l1-14M10 9v8m4-8v8"/>',
+  board: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18m6-18v18"/>',
+  print: '<path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7Z"/>',
+  leaf: '<path d="M5 19C-1 7 11 2 20 3c1 12-5 17-15 16Zm0 0L16 8"/>',
+  copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>'
+};
+const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.cup}</svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const root = document.querySelector('#app'), modal = document.querySelector('#modal');
+const button = (a, text, style = '', extra = '') => `<button type="button" class="btn ${style}" data-action="${a}" ${extra}>${text}</button>`;
+const labelSystem = t => t.system === 'swiss' ? 'Клубная швейцарка' : 'Круговой';
+const date = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleDateString('ru', { day:'numeric', month:'short' });
+const stamp = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleString('ru', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+let db, fatal = '', filter = 'all', wizard = { mode:'simple', system:'swiss' }, tieOrder = [], toastTimer, recoveryPending;
+const stored = key => { try { return localStorage.getItem(key); } catch { return null; } };
+try { db = loadDatabase(); } catch (e) { db = emptyDatabase(); fatal = e.message; }
+let currentId = null, tab = 'rounds', viewRound = 0, rankingThrough = null;
+function route() {
+  const parts = location.hash.slice(1).split('/').filter(Boolean);
+  const page = parts[0] || 'home';
+  if (page === 'tour') { currentId = parts[1]; tab = ['rounds','ranking','players','history'].includes(parts[2]) ? parts[2] : 'rounds'; viewRound = Number(parts[3]) || 0; }
+  return page;
+}
+const current = () => db.tournaments.find(t => t.id === currentId);
+function navigate(path) { if (location.hash === '#' + path) render(); else location.hash = path; }
+function showToast(text, error = false) {
+  const node = document.querySelector('#toast'); node.textContent = text; node.className = 'visible' + (error ? ' error' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { node.className = ''; }, error ? 7000 : 2500);
+}
+function save(next) {
+  if (fatal) throw new Error('Сначала восстановите локальные данные из резервной копии.');
+  db = persistDatabase(next, db.revision);
+}
+function change(label, action) {
+  const next = clone(db), t = next.tournaments.find(x => x.id === currentId);
+  if (!t) throw new Error('Выберите турнир.');
+  const before = clone(t); action(t); t.updated = new Date().toISOString(); validateTournament(t);
+  const history = next.history[t.id] ||= [];
+  history.unshift({ id:uid(), at:t.updated, label, snapshot:before }); next.history[t.id] = history.slice(0, 24);
+  save(next); render();
+}
+function create(t) { const next = clone(db); next.tournaments.unshift(validateTournament(t)); save(next); currentId = t.id; navigate(`tour/${t.id}/${t.rounds.length ? 'rounds' : 'players'}`); }
+function dialog(title, body) {
+  modal.innerHTML = `<div class="modal-head"><h2 id="modal-title">${esc(title)}</h2><button class="icon-btn" type="button" data-action="dismiss" aria-label="Закрыть">${icon('close')}</button></div><div class="modal-body">${body}</div>`;
+  if (!modal.open) modal.showModal();
+}
+function confirm(title, text, action, extra = '', dangerous = false) {
+  dialog(title, `<p>${text}</p><div class="modal-actions">${button('dismiss','Отмена')}${button(action, dangerous ? 'Вернуться и сохранить копию' : 'Подтвердить', 'primary', extra)}</div>`);
+}
+function download(name, content, type = 'application/json') {
+  const blob = new Blob([content], { type }); const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function nav() {
+  const page = route(), t = current();
+  const selected = page === 'tour' ? tab : page;
+  const items = [ ['home','cup','Турниры'], ['players','people','Участники'], ['ranking','chart','Таблица мест'], ['backup','shield','Копии и история'] ];
+  return { selected, items, t };
+}
+function layout(content) {
+  const { selected, items } = nav();
+  const item = ([a, i, text]) => `<button class="nav-item ${selected === a ? 'selected' : ''}" data-action="nav" data-target="${a}">${icon(i)}${text}</button>`;
+  const logo = `<button class="logo" data-action="home" aria-label="На главную"><span class="logo-mark">♞</span>турнир<span style="color:#91a37f">.</span></button>`;
+  return `<aside class="sidebar">${logo}<div class="nav-caption eyebrow">Рабочий стол</div><nav>${items.map(item).join('')}</nav><div class="sidebar-note">${icon('shield')}<strong>Каждый ход сохранён</strong>Автосохранение и история изменений. Для переноса на другой телефон скачайте копию.</div></aside>
+    <main class="main"><header class="topbar"><div class="breadcrumb">Рабочий стол <span style="margin:0 10px;color:#b9c1b1">/</span><b>${route() === 'new' ? 'Новый турнир' : route() === 'tour' ? esc(current()?.name) : route() === 'backup' ? 'Резервные копии' : 'Мои турниры'}</b></div><div class="mobile-logo">${logo}</div><div class="topbar-right"><span class="save-state"><i class="save-dot ${navigator.onLine ? '' : 'offline-dot'}"></i>${fatal ? 'Ошибка хранения' : navigator.onLine ? 'Сохранено на устройстве' : 'Офлайн · сохранено'}</span><span class="user-mark" title="Рабочий стол организатора">ОР</span></div></header>
+    ${fatal ? `<div class="feedback-error">${esc(fatal)} ${button('raw-backup','Скачать исходные данные')}</div>` : ''}${content}
+    <footer class="page-footer"><span>Турнир. Для хорошей игры.</span><span>Шахматы под контролем&nbsp; ♞</span></footer></main>
+    <nav class="mobile-nav" aria-label="Главная навигация">${items.map(([a,i,text]) => `<button data-action="nav" data-target="${a}" class="${selected === a ? 'selected' : ''}">${icon(i)}<span>${a === 'backup' ? 'Копии' : a === 'ranking' ? 'Места' : text}</span></button>`).join('')}</nav>`;
+}
+function home() {
+  const tournaments = db.tournaments.filter(t => filter === 'all' || (filter === 'finished' ? t.status === 'finished' : t.status !== 'finished'));
+  return `<section class="page-heading"><div><div class="eyebrow">Место для каждой партии</div><h1>Ваши турниры</h1><p>Меньше организационных забот. Больше шахмат.</p></div>${button('new',icon('plus')+' Новый турнир','primary')}</section>
+    <section class="hero-card"><div><div class="eyebrow">От первой пары до последнего места</div><h2>Хороший турнир<br>начинается здесь.</h2><p>Детский клуб или серьёзная борьба — выберите формат, добавьте участников и начните игру.</p>${button('new','Создать турнир '+icon('arrow'),'light')}</div><div class="hero-art" aria-hidden="true"><span>♞</span></div></section>
+    <div class="metrics"><div class="metric"><div><span>В процессе</span><strong>${db.tournaments.filter(t=>t.status==='active').length}</strong></div>${icon('cup')}</div><div class="metric"><div><span>Участников</span><strong>${db.tournaments.reduce((s,t)=>s+t.players.length,0)}</strong></div>${icon('people')}</div><div class="metric"><div><span>Партий сыграно</span><strong>${db.tournaments.reduce((s,t)=>s+t.rounds.reduce((s,r)=>s+r.matches.filter(m=>['1-0','½-½','0-1'].includes(m.result)).length,0),0)}</strong></div>${icon('board')}</div></div>
+    <div class="section-heading row between"><h2>Мои турниры <span class="muted small">${db.tournaments.length ? '· '+db.tournaments.length : ''}</span></h2><select class="btn" id="filter" aria-label="Фильтр турниров"><option value="all" ${filter==='all'?'selected':''}>Все турниры</option><option value="active" ${filter==='active'?'selected':''}>Текущие</option><option value="finished" ${filter==='finished'?'selected':''}>Завершённые</option></select></div>
+    ${tournaments.length ? `<div class="cards">${tournaments.map(t => `<button class="tournament-card" data-action="open" data-id="${esc(t.id)}"><div class="row between"><span class="badge ${t.status==='active'?'active':t.status==='draft'?'amber':''}">${t.status==='active'?'Идёт турнир':t.status==='draft'?'Подготовка':'Завершён'}</span><span class="small muted">${date(t.created)}</span></div><div class="card-title"><span class="symbol">${t.mode==='simple'?'♟':'♞'}</span><div><h3>${esc(t.name)}</h3><span class="small muted">${t.mode==='simple'?'Детский / клубный':'Расширенный режим'}</span></div></div><div class="card-meta"><span>${icon('people')} ${t.players.length} игроков</span><span>${icon('board')} ${labelSystem(t)}</span></div><div class="card-bottom"><span>${t.rounds.length ? `Тур ${t.rounds.length} из ${t.plannedRounds}` : 'Готовим список участников'}</span><div class="row"><div class="mini-progress">${Array.from({length:Math.min(t.plannedRounds,10)},(_,i)=>`<span class="${t.rounds[i]?.closed?'done':''}"></span>`).join('')}</div>${icon('arrow')}</div></div></button>`).join('')}</div>` : `<div class="empty-state">${icon('cup')}<h3>${db.tournaments.length ? 'Таких турниров пока нет' : 'Здесь будет ваш первый турнир'}</h3><p>Начните с простого режима без рейтингов. Или сначала посмотрите, как всё устроено.</p>${button('demo','Открыть демонстрационный турнир '+icon('arrow'))}</div>`}
+    <div class="footnote">${icon('shield')}<span>Данные хранятся на этом устройстве. ${button('export-all','Скачать копию','link')} для переноса и дополнительной защиты.</span></div>`;
+}
+function newPage() {
+  return `<div class="wizard"><div class="page-heading"><div><div class="eyebrow">Новая история за доской</div><h1>Какой турнир проводим?</h1><p>Выберите удобный режим. Остальное мы посчитаем.</p></div></div><div class="step-line"><span></span><span></span><span></span></div><form id="create-form"><div class="panel"><div class="panel-body"><h2>Сначала — уровень сложности</h2><div class="choices"><label class="choice">${icon('leaf')}<input type="radio" name="mode" value="simple" ${wizard.mode==='simple'?'checked':''}><strong>Детский / клубный</strong><p>Без рейтинга. Только участники, пары, очки и честные места.</p></label><label class="choice">${icon('chart')}<input type="radio" name="mode" value="advanced" ${wizard.mode==='advanced'?'checked':''}><strong>Расширенный</strong><p>Рейтинг для посева, статистика игроков и подробные коэффициенты.</p></label></div><div class="form-grid"><label class="field full">Название турнира<input name="name" placeholder="Например, Кубок шахматной школы" maxlength="100" required></label><label class="field">Формат<select name="system"><option value="swiss" ${wizard.system==='swiss'?'selected':''}>Клубная швейцарка</option><option value="roundrobin" ${wizard.system==='roundrobin'?'selected':''}>Круговой — каждый с каждым</option></select></label><label class="field">Контроль времени<input name="control" value="10 + 5" maxlength="50" placeholder="Например, 10 + 5"></label><label class="field ${wizard.system==='roundrobin'?'full':''}">${wizard.system==='swiss'?'Количество туров':'Туры по числу участников'}${wizard.system==='swiss'?'<input type="number" name="rounds" value="5" min="1" max="63" required><small>При старте ограничим числом возможных встреч.</small>':'<div class="rules-box">Для 8 игроков — 7 туров; для 9 — 9 туров. Каждый встретится с каждым один раз.</div>'}</label></div><div class="rules-box" style="margin-top:20px"><h3>${wizard.system==='swiss'?'Кто с кем играет?':'Простой и предсказуемый формат'}</h3><p>${wizard.system==='swiss'?'Пары подбираются среди игроков с близкими очками, без повторных встреч, с учётом цвета. Это клубный алгоритм, не официальная жеребьёвка FIDE Dutch. Для нечётного числа участников — один свободный тур с 1 очком.':'Расписание фиксировано: все сыграют друг с другом. При нечётном числе игроков каждый один раз отдыхает без начисления очков.'}</p></div></div><div class="rules"><strong>Места:</strong> очки → ${wizard.system==='swiss'?'БХ−1 → БХ → ЗБ → победы за доской':'ЗБ → победы за доской'}. Порядок можно настроить до старта. При полном равенстве — общее место.</div></div><div class="form-actions">${button('home',icon('back')+' Назад')}<button class="btn primary" type="submit">Добавить участников ${icon('arrow')}</button></div></form></div>`;
+}
+function tourPage(t) {
+  const round = viewRound || t.rounds.length;
+  return `<div class="page-heading"><div><div class="eyebrow">${t.demo?'Демонстрационный турнир':'Рабочий стол организатора'}</div><h1>${esc(t.name)}</h1><p>${t.mode==='simple'?'Простой режим · без рейтингов':'Расширенный режим · рейтинг и статистика'}</p></div>${button('tour-menu',icon('more'),'','aria-label="Действия с турниром"')}</div>
+    <div class="summary"><div><div class="eyebrow">${t.status==='draft'?'Подготовка к игре':t.status==='finished'?'Все результаты внесены':'Каждая партия важна'}</div><h2>${t.status==='draft'?'Собираем участников':t.status==='finished'?'Турнир завершён':'Игра продолжается'}</h2><div class="meta"><span>${icon('people')} ${t.players.length} игроков</span><span>${labelSystem(t)}</span><span>${icon('clock')} ${esc(t.control)}</span></div></div><div class="round-counter">${t.rounds.length ? String(round).padStart(2,'0') : '—'} <small>/ ${String(t.plannedRounds).padStart(2,'0')}</small></div></div>
+    <nav class="tabs" aria-label="Разделы турнира">${[['rounds','Пары и результаты'],['ranking','Таблица мест'],['players','Участники'],['history','История']].map(([a,text])=>`<button class="tab ${tab===a?'selected':''}" data-action="tab" data-target="${a}">${text}</button>`).join('')}</nav>
+    ${tab==='rounds'?roundPage(t):tab==='ranking'?rankingPage(t):tab==='players'?playersPage(t):historyPage(t)}
+    <div class="footnote">${icon('shield')}<span>Каждое изменение записывается в историю. ${button('export-tour','Скачать копию турнира','link')}</span></div>`;
+}
+function roundPage(t) {
+  if (!t.rounds.length) return `<div class="empty-state">${icon('board')}<h3>Сначала добавим участников</h3><p>После старта состав и правила будут зафиксированы, чтобы результаты оставались надёжными.</p>${button('tab','Перейти к участникам '+icon('arrow'),'primary','data-target="players"')}</div>`;
+  viewRound = Math.min(viewRound || t.rounds.length,t.rounds.length); const r=t.rounds[viewRound-1], live=statistics(t), prior=statistics(t,viewRound-1);
+  const people=new Map(t.players.map(p=>[p.id,p])), pts=new Map(prior.map(p=>[p.id,p.points]));
+  const complete=r.matches.filter(m=>m.black===null||m.result).length, actual=r.matches.filter(m=>m.black!==null).length;
+  const person = (id,black=false) => `<div class="player-side"><div class="player-name"><i class="piece ${black?'black':''}"></i>${esc(people.get(id).name)}</div><small>${fmt(pts.get(id))} очк.${t.mode==='advanced'?' · '+(people.get(id).rating||'без рейтинга'):''}</small></div>`;
+  return `<div class="tour-grid"><section><div class="rounds-tabs" aria-label="Туры">${t.rounds.map(r=>`<button class="round-chip ${r.number===viewRound?'selected':''}" data-action="round" data-number="${r.number}">Тур ${r.number}${r.closed?'<span class="tiny-dot"></span>':''}</button>`).join('')}</div><div class="panel"><div class="panel-head"><div><h2>Тур ${viewRound} <span class="badge ${r.closed?'':'active'}" style="margin-left:7px">${r.closed?'Завершён':'Открыт'}</span></h2><p>${actual} ${actual===1?'партия':'партий'} · ${r.closed?'Результаты зафиксированы':'Выберите результат под каждой парой'}</p></div>${button('print-pairs',icon('print'),'','aria-label="Печать пар"')}</div><div class="panel-body"><div class="round-state row between"><span>${complete} из ${r.matches.length} результатов</span><span>${Math.round(complete/r.matches.length*100)}%</span></div><div class="progress-track"><i style="width:${complete/r.matches.length*100}%"></i></div>${r.matches.map((m,i)=>m.black===null?`<div class="match-card bye"><div class="row between"><div><span class="board-no">СВОБОДНЫЙ ТУР</span><h3 style="margin-top:5px">${esc(people.get(m.white).name)}</h3><p class="muted small" style="margin-top:4px">${t.system==='swiss'?'Автоматически · не считается победой за доской':'Отдых · каждый встретится с каждым'}</p></div><span class="badge">+${m.byePoints} очк.</span></div></div>`:`<article class="match-card ${m.result?'done':''}"><div class="match-head"><span class="board-no">ДОСКА ${String(i+1).padStart(2,'0')}</span><div class="row"><span class="result-label">${m.result?['+-','-+','--'].includes(m.result)?'Неявка · '+esc(m.result):'Внесён результат':'Ожидаем результат'}</span>${!r.closed?`<button type="button" class="icon-btn" style="min-height:28px;min-width:28px;padding:4px" data-action="match-menu" data-id="${esc(m.id)}" aria-label="Особые результаты и сброс">${icon('more')}</button>`:''}</div></div><div class="match-players">${person(m.white)}<span class="versus">vs</span>${person(m.black,true)}</div><div class="results">${[['1-0','1 – 0'],['½-½','½ – ½'],['0-1','0 – 1']].map(([val,text])=>`<button type="button" class="result-btn ${m.result===val?'selected':''}" data-action="result" data-id="${esc(m.id)}" data-result="${val}" ${r.closed?'disabled':''} aria-label="${val==='1-0'?'Победа белых':val==='0-1'?'Победа чёрных':'Ничья'}" aria-pressed="${m.result===val}">${text}</button>`).join('')}</div></article>`).join('')}
+    <div class="round-footer">${!r.closed ? button('close-round','Завершить тур '+icon('check'),'primary',complete!==r.matches.length?'disabled':'') : viewRound===t.rounds.length && t.status!=='finished' ? button('next-round','Создать следующий тур '+icon('arrow'),'primary') : ''}${r.closed || viewRound!==t.rounds.length ? button('rollback-ask',icon('undo')+' Вернуться к этому туру','','data-number="'+viewRound+'"') : ''}${t.status==='finished'?button('tab',icon('cup')+' Итоговая таблица','primary','data-target="ranking"'):''}</div></div></div></section><aside class="stack"><div class="panel"><div class="panel-head"><div><h2>Кто впереди?</h2><p>По всем внесённым результатам</p></div>${icon('chart')}</div><div class="ranking-list">${live.slice(0,6).map(p=>rankCard(t,p)).join('')}</div><button class="panel-link" data-action="tab" data-target="ranking">Открыть всю таблицу &nbsp; →</button></div><div class="rules-box"><h3>${icon('shield')} Результаты под контролем</h3><p>Закрытый тур защищён от случайных нажатий. Чтобы исправить его, вернитесь к нему — результаты останутся, а следующие туры попадут в историю.</p></div></aside></div>`;
+}
+function rankCard(t,p,detailed=false) {
+  return `<button class="rank-card" data-action="profile" data-id="${esc(p.id)}"><span class="rank-no">${p.rank}</span><div class="rank-info"><strong>${esc(p.name)}</strong><small>${t.mode==='advanced'?(p.rating?p.rating+' · ':'Без рейтинга · '):''}${p.wins} побед · ${p.draws} ничьих${!detailed?' · '+TIEBREAKS[t.tiebreaks[0]].short+' '+fmt(p[t.tiebreaks[0]]):''}</small>${detailed?`<div class="coefficients">${t.tiebreaks.map(k=>`<span>${TIEBREAKS[k].short} <b>${fmt(p[k])}</b></span>`).join('')}</div>`:''}</div><span class="rank-points">${fmt(p.points)}<small>очки</small></span></button>`;
+}
+function rulesText(t) {
+  return `<strong>Порядок мест:</strong> очки → ${t.tiebreaks.map(k=>TIEBREAKS[k].short).join(' → ')}. Рейтинг не решает место. При полном равенстве — общее место.<br>${t.system==='swiss'?'БХ = сумма очков соперников; БХ−1 = БХ без одного наименьшего вклада (при неявке игрока сначала убирается вклад неявки). ':''}ЗБ = сумма «очки соперника × ваш результат». ${t.system==='swiss'?'Для свободных туров и неявок используется условный соперник по правилам FIDE от 01.03.2026, §16.':'Отдых не влияет на очки и ЗБ; неявки считаются по очкам назначенного соперника (§15).'} Нажмите на игрока, чтобы увидеть слагаемые.`;
+}
+function rankingPage(t) {
+  if (rankingThrough!==null && rankingThrough>t.rounds.length) rankingThrough=null;
+  const through=rankingThrough??t.rounds.length, rows=statistics(t,through);
+  return `<div class="print-header"><h1>${esc(t.name)}</h1><p>Таблица после тура ${through} · ${labelSystem(t)} · ${esc(t.control)}</p></div><div class="row between wrap" style="margin-bottom:17px"><div><h2>Таблица мест</h2><p class="small muted" style="margin-top:5px">${t.status==='finished'&&through===t.rounds.length?'Итоговые результаты':'Текущие результаты · коэффициенты могут измениться'}</p></div><div class="row top-actions"><select class="btn" id="ranking-through" aria-label="Таблица после тура"><option value="all" ${rankingThrough===null?'selected':''}>Все результаты</option>${t.rounds.map(r=>`<option value="${r.number}" ${rankingThrough===r.number?'selected':''}>После тура ${r.number}</option>`).join('')}</select>${button('csv',icon('download'),'','aria-label="Скачать таблицу CSV"')}${button('print',icon('print'),'','aria-label="Печать или PDF"')}</div></div><section class="panel"><div class="ranking-desktop table-scroll"><table class="rank-table"><thead><tr><th>Место</th><th>Участник</th><th>Очки</th>${t.tiebreaks.map(k=>`<th title="${TIEBREAKS[k].name}">${TIEBREAKS[k].short}</th>`).join('')}<th>Партии</th></tr></thead><tbody>${rows.map(p=>`<tr><td><span class="rank-no">${p.rank}</span></td><td class="name-cell"><button class="player-link" data-action="profile" data-id="${esc(p.id)}">${esc(p.name)}</button>${t.mode==='advanced'?`<span class="muted small" style="display:block">${p.rating||'Без рейтинга'}</span>`:''}</td><td class="number"><strong>${fmt(p.points)}</strong></td>${t.tiebreaks.map(k=>`<td class="number">${fmt(p[k])}</td>`).join('')}<td class="muted">${p.played}</td></tr>`).join('')||'<tr><td colspan="8">Добавьте участников.</td></tr>'}</tbody></table></div><div class="ranking-mobile ranking-list">${rows.map(p=>rankCard(t,p,true)).join('')}</div><div class="rules">${rulesText(t)}</div></section><div class="footnote">${icon('info')}<span>Снимок после тура ${through}. Для независимой проверки откройте карточку игрока. ${button('rules','Подробнее о правилах','link')}</span></div>`;
+}
+function playersPage(t) {
+  const locked=t.status!=='draft';
+  return `<div class="tour-grid"><section class="panel"><div class="panel-head"><div><h2>Участники <span class="muted small">· ${t.players.length}</span></h2><p>${locked?'Состав зафиксирован после старта':'Добавьте игроков по одному или вставьте весь список'}</p></div>${locked?icon('shield'):button('bulk',icon('people')+' Списком')}</div>${!locked?`<div class="panel-body" style="border-bottom:1px solid var(--line)"><form id="add-player-form" class="add-player"><label class="field">Имя и фамилия<input name="name" placeholder="Имя участника" maxlength="80" required autocomplete="off"></label>${t.mode==='advanced'?'<label class="field rating-field">Рейтинг<input name="rating" type="number" min="0" max="3500" placeholder="0"></label>':''}<button class="btn primary" type="submit" aria-label="Добавить участника">${icon('plus')} Добавить</button></form></div>`:''}<div class="players-list">${t.players.map(p=>`<div class="participant"><div class="row"><span class="initial">${esc(p.name[0].toUpperCase())}</span><div><strong>${esc(p.name)}</strong><small>№ ${p.seed}${t.mode==='advanced'?' · '+(p.rating||'Без рейтинга'):''}</small></div></div>${locked?button('profile',icon('chart'),'','data-id="'+esc(p.id)+'" aria-label="Статистика игрока"'):button('remove-player',icon('trash'),'','data-id="'+esc(p.id)+'" aria-label="Удалить участника"')}</div>`).join('')||'<div class="empty-state" style="border:0;margin:20px 0"><h3>Каждый игрок — часть истории</h3><p>Добавьте хотя бы двух участников. Можно просто скопировать список имён.</p></div>'}</div>${!locked?`<div class="panel-body" style="border-top:1px solid var(--line)"><div class="rules-box" style="margin-bottom:16px"><h3>${t.system==='roundrobin'?roundCount(t.players.length||2):Math.min(t.plannedRounds,roundCount(t.players.length||2))} туров · ${t.players.length} участников</h3><p>${t.players.length%2?'При нечётном числе участников один игрок в каждом туре '+(t.system==='swiss'?'получит 1 очко без игры.':'будет отдыхать без очков.'):'Победа — 1 очко, ничья — ½, поражение — 0.'}<br>Правила и список фиксируются при старте.</p></div>${button('start-ask','Начать турнир '+icon('arrow'),'primary',`style="width:100%" ${t.players.length<2?'disabled':''}`)}</div>`:''}</section><aside class="stack"><div class="panel"><div class="panel-head"><h2>Регламент</h2>${icon('settings')}</div><div class="panel-body stack"><div><div class="eyebrow">Формат</div><p style="margin-top:7px">${labelSystem(t)}</p></div><div><div class="eyebrow">Места при равных очках</div><p class="small" style="margin-top:7px">${t.tiebreaks.map(k=>TIEBREAKS[k].short).join(' → ')}</p></div>${!locked?button('settings','Настроить регламент'):button('rules','Посмотреть правила')}</div></div></aside></div>${!locked?`<div style="margin-top:15px">${button('settings',icon('settings')+' Регламент и коэффициенты')}</div>`:''}`;
+}
+function historyPage(t) {
+  const history=db.history[t.id]||[];
+  return `<section class="panel"><div class="panel-head"><div><h2>История изменений</h2><p>Последние 24 изменения. Восстановление тоже сохраняет текущую версию.</p></div>${icon('clock')}</div><div class="panel-body">${history.map(h=>`<div class="history-item"><div><strong>${esc(h.label)}</strong><small>${stamp(h.at)} · до изменения: ${h.snapshot.rounds.length} туров</small></div>${button('restore-ask','Восстановить','','data-id="'+esc(h.id)+'"')}</div>`).join('')||'<p class="muted small">История появится после первого изменения.</p>'}</div></section><div class="rules-box" style="margin-top:17px">Хранится полный снимок до каждого изменения, включая участников, пары, результаты и правила. Для долгого хранения скачайте JSON: история в браузере ограничена.</div>`;
+}
+function backupPage() {
+  const legacy=stored('tournament-organizer-v1');
+  return `<div class="page-heading"><div><div class="eyebrow">Спокойствие организатора</div><h1>Данные под защитой</h1><p>Сохраните турнир вне браузера — и продолжайте на любом устройстве.</p></div></div><div class="cards"><section class="panel"><div class="panel-head"><h2>${icon('download')} Резервная копия</h2></div><div class="panel-body stack"><p class="small muted">Все турниры и история изменений в одном JSON-файле. При очистке браузера или потере телефона этот файл поможет вернуть результаты.</p>${button('export-all','Скачать все турниры','primary')}<p class="small muted">${db.tournaments.length} турниров · локальная версия ${db.revision}</p></div></section><section class="panel"><div class="panel-head"><h2>${icon('upload')} Восстановление</h2></div><div class="panel-body stack"><p class="small muted">Выберите сохранённый JSON. Копии добавятся как отдельные турниры: текущие результаты сохранятся.</p>${button('import','Выбрать файл')}<input id="import-file" type="file" accept=".json,application/json" hidden><p class="small muted">Файл проверяется целиком до импорта.</p></div></section></div>${legacy?`<div class="rules-box" style="margin-top:20px"><h3>Сохранены данные первой версии</h3><p>Старые записи оставлены нетронутыми. Скачайте их отдельно для сохранности.</p>${button('legacy','Скачать данные первой версии','','style="margin-top:10px"')}</div>`:''}<div class="rules-box" style="margin-top:22px"><h3>${icon('shield')} Как работает сохранение</h3><p>Две локальные копии с проверкой целостности, автоматическое сохранение каждого результата и защита от записи из устаревшей вкладки. После первого открытия сайт можно использовать без интернета. Синхронизации между телефоном и ПК пока нет — используйте экспорт и импорт JSON.</p></div><div class="section-heading" style="margin-top:28px"><h2>Вернуться к истории турнира</h2></div><div class="cards">${db.tournaments.map(t=>`<button class="tournament-card" data-action="open-history" data-id="${esc(t.id)}"><div class="row between"><h3>${esc(t.name)}</h3>${icon('arrow')}</div><p class="small muted" style="margin-top:8px">${(db.history[t.id]||[]).length} сохранённых изменений</p></button>`).join('')}</div>`;
+}
+function render() {
+  const page=route();
+  let content=page==='new'?newPage():page==='backup'?backupPage():page==='tour'&&current()?tourPage(current()):home();
+  root.innerHTML=layout(content); document.title=(page==='tour'&&current()?current().name+' — ':'')+'Турнир';
+}
+function settingsDialog() {
+  const t=current(); tieOrder=[...t.tiebreaks];
+  dialog('Регламент турнира',`<form id="settings-form"><div class="form-grid"><label class="field full">Название<input name="name" value="${esc(t.name)}" maxlength="100" required></label><label class="field">Туры<input name="rounds" type="number" min="1" max="63" value="${t.plannedRounds}" ${t.system==='roundrobin'?'disabled':''} required></label><label class="field">Контроль времени<input name="control" value="${esc(t.control)}" maxlength="50"></label></div><h3 style="margin:22px 0 8px">Порядок коэффициентов</h3><p class="small muted">Очки всегда первые. Выберите и расставьте следующие критерии.</p><div id="tie-settings">${tieRows(t)}</div><div class="modal-actions">${button('dismiss','Отмена')}<button type="submit" class="btn primary">Сохранить правила</button></div></form>`);
+}
+function tieRows(t) {
+  const allowed=t.system==='swiss'?['bhc1','bh','sb','wins']:['sb','wins'];
+  return [...tieOrder,...allowed.filter(k=>!tieOrder.includes(k))].map(k=>`<div class="tie-row"><label><input type="checkbox" data-tie="${k}" ${tieOrder.includes(k)?'checked':''}>${TIEBREAKS[k].name}</label>${tieOrder.includes(k)?`<div class="tie-buttons"><button type="button" data-action="tie-up" data-key="${k}" aria-label="Поднять критерий" ${tieOrder.indexOf(k)===0?'disabled':''}>↑</button><button type="button" data-action="tie-down" data-key="${k}" aria-label="Опустить критерий" ${tieOrder.indexOf(k)===tieOrder.length-1?'disabled':''}>↓</button></div>`:''}</div>`).join('');
+}
+function rulesDialog() {
+  const t=current();
+  dialog('Как определяются места',`<div class="rules-box"><h3>Сначала очки, затем коэффициенты</h3>${rulesText(t)}</div><div class="stack" style="margin-top:18px;font-size:12px;color:var(--muted)"><p>Свободный тур в швейцарке: 1 очко; вклад условного соперника — минимум из собственных очков игрока и половины запланированного числа туров. Для неявки — минимум собственных очков и очков назначенного соперника.</p><p>В круговом турнире отдых не даёт очков и не участвует в коэффициентах. Неявки не считаются сыгранными партиями или победами за доской.</p><p>Клубная швейцарка запрещает повторные встречи и старается сбалансировать очки и цвета. Этот подбор пар не является алгоритмом FIDE Dutch. Отдельные запрошенные пропуски и снятие с турнира пока не поддерживаются.</p><a href="https://handbook.fide.com/chapter/TieBreakRegulations032026" target="_blank" rel="noopener" style="color:var(--green)">Источник формул: FIDE, правила с 1 марта 2026 ↗</a></div>`);
+}
+function profileDialog(id) {
+  const t=current(), through=tab==='ranking'?(rankingThrough??t.rounds.length):t.rounds.length;
+  const p=statistics(t,through).find(p=>p.id===id), names=new Map(t.players.map(p=>[p.id,p.name]));
+  if (!p) return;
+  const all=t.rounds.slice(0,through), scores=all.map((_,i)=>statistics(t,i+1).find(x=>x.id===id).points);
+  const x=(i)=>10+i*280/Math.max(1,scores.length-1), y=s=>110-s*95/Math.max(1,...scores), points=scores.map((s,i)=>`${x(i)},${y(s)}`).join(' ');
+  dialog(p.name,`<div class="row between"><span class="badge">Место ${p.rank} · после тура ${through}</span><span class="small muted">${t.mode==='advanced'?(p.rating||'Без рейтинга'):'Без рейтинга'}</span></div><div class="profile-stats">${[['Очки',p.points],['Партии',p.played],['Победы',p.wins],['Ничьи',p.draws],['Поражения',p.losses],['Свободные туры',p.byes]].map(([text,val])=>`<div class="profile-stat">${text}<strong>${fmt(val)}</strong></div>`).join('')}</div>${t.mode==='advanced'&&scores.length?`<div class="analysis-chart"><p>Накопленные очки по турам</p><svg viewBox="0 0 300 140" role="img" aria-label="Очки по турам: ${scores.map((s,i)=>'тур '+(i+1)+' — '+fmt(s)).join('; ')}"><path d="M10 115H290" stroke="#dfe8d4"/><polyline points="${points}" fill="none" stroke="#729c54" stroke-width="2"/>${scores.map((s,i)=>`<circle cx="${x(i)}" cy="${y(s)}" r="3" fill="#174c3c"/><text x="${x(i)}" y="133" text-anchor="middle" fill="#8a9780" font-size="9">${i+1}</text>`).join('')}</svg></div>`:''}<h3>Слагаемые коэффициентов</h3><p class="small muted" style="margin:7px 0 10px">${t.tiebreaks.map(k=>TIEBREAKS[k].short+' '+fmt(p[k])).join(' · ')}</p>${p.entries.map(e=>`<div class="coeff-row"><div>Тур ${e.round} · ${esc(names.get(e.opponent)||'Свободный тур')}<small>${e.kind==='played'?'Очки соперника':e.kind==='bye'?'Условный соперник (с ограничением)':'Неявка · условный соперник'}: ${fmt(e.contribution)} · результат: ${fmt(e.score)}</small></div><div style="white-space:nowrap">${t.system==='swiss'?'БХ '+fmt(e.contribution)+'<br>':''}ЗБ ${fmt(e.sbContribution)}</div></div>`).join('')||'<p class="small muted" style="margin-top:14px">Сыгранных партий пока нет.</p>'}<div class="rules-box" style="margin-top:18px">Рейтинг не используется для определения места. БХ−1 исключает один вклад; при неявке игрока — минимальный вклад из его неявок. При равных очках и всех выбранных коэффициентах место общее.</div>`);
+}
+function addPlayers(input) {
+  const t=current(); if(t.status!=='draft')throw new Error('Состав уже зафиксирован.');
+  const existing=new Set(t.players.map(p=>p.name.toLocaleLowerCase('ru'))), players=[];
+  for(const item of input) {
+    const name=item.name.trim(), rating=Number(item.rating||0);
+    if(!name||name.length>80)throw new Error('Имя должно содержать от 1 до 80 символов.');
+    if(!Number.isInteger(rating)||rating<0||rating>3500)throw new Error('Рейтинг должен быть целым числом от 0 до 3500.');
+    if(existing.has(name.toLocaleLowerCase('ru')))throw new Error(`«${name}» уже есть в списке. Для однофамильцев уточните имя.`);
+    existing.add(name.toLocaleLowerCase('ru'));players.push({id:uid(),name,rating:t.mode==='advanced'?rating:0});
+  }
+  if(t.players.length+players.length>64)throw new Error('В этой версии поддерживается до 64 участников.');
+  change(`Добавлены участники: ${players.length}`,t=>{let seed=Math.max(0,...t.players.map(p=>p.seed));t.players.push(...players.map(p=>({...p,seed:++seed})));if(t.system==='roundrobin'&&t.players.length>=2)t.plannedRounds=roundCount(t.players.length)});
+}
+async function act(a,d) {
+  const t=current();
+  if(a==='dismiss'){modal.close();return}
+  if(a==='home'){navigate('home');return}
+  if(a==='new'){wizard={mode:'simple',system:'swiss'};navigate('new');return}
+  if(a==='nav'){
+    if(['home','backup'].includes(d.target))navigate(d.target);
+    else if(t){rankingThrough=null;navigate(`tour/${t.id}/${d.target}`)}
+    else{navigate('home');showToast('Сначала откройте или создайте турнир.')}return;
+  }
+  if(a==='open'||a==='open-history'){currentId=d.id;rankingThrough=null;navigate(`tour/${d.id}/${a==='open-history'?'history':db.tournaments.find(t=>t.id===d.id)?.status==='draft'?'players':'rounds'}`);return}
+  if(a==='tab'){rankingThrough=null;navigate(`tour/${t.id}/${d.target}`);return}
+  if(a==='round'){navigate(`tour/${t.id}/rounds/${d.number}`);return}
+  if(a==='result'){if(t.rounds[viewRound-1]?.matches.find(m=>m.id===d.id)?.result===d.result)return;change(`Тур ${viewRound}: результат ${d.result}`,t=>setResult(t,viewRound,d.id,d.result));return}
+  if(a==='match-menu'){
+    dialog('Результат и неявка',`<p>Неявка начисляет очки, но не считается сыгранной партией и учитывается отдельно в коэффициентах.</p><div class="stack" style="margin-top:18px">${button('special-result','Белые победили без игры (+ −)','','data-id="'+esc(d.id)+'" data-result="+-"')}${button('special-result','Чёрные победили без игры (− +)','','data-id="'+esc(d.id)+'" data-result="-+"')}${button('special-result','Оба не явились (− −)','','data-id="'+esc(d.id)+'" data-result="--"')}${button('special-result','Сбросить результат','danger','data-id="'+esc(d.id)+'" data-result="clear"')}</div>`);return;
+  }
+  if(a==='special-result'){change(`Тур ${viewRound}: ${d.result==='clear'?'результат сброшен':'неявка '+d.result}`,t=>setResult(t,viewRound,d.id,d.result==='clear'?null:d.result));modal.close();return}
+  if(a==='close-round'){confirm('Завершить тур?',`Результаты тура ${viewRound} будут зафиксированы. При необходимости их можно исправить через «Вернуться к этому туру».`,'close-round-confirm');return}
+  if(a==='close-round-confirm'){change(`Завершён тур ${t.rounds.length}`,closeRound);modal.close();showToast(current().status==='finished'?'Турнир завершён. Итоговая таблица готова.':'Тур завершён и сохранён.');return}
+  if(a==='next-round'){change(`Создан тур ${t.rounds.length+1}`,addRound);navigate(`tour/${t.id}/rounds/${current().rounds.length}`);showToast('Новые пары созданы.');return}
+  if(a==='rollback-ask'){confirm(`Вернуться к туру ${d.number}?`,`Результаты этого тура останутся доступны для исправления. Все следующие туры будут отменены. Полный снимок до возврата сохранится в истории — его можно восстановить.`,'rollback-confirm','data-number="'+d.number+'"',true);return}
+  if(a==='rollback-confirm'){change(`Возврат к туру ${d.number}`,t=>rollback(t,Number(d.number)));modal.close();navigate(`tour/${t.id}/rounds/${d.number}`);showToast('Возврат выполнен. Предыдущая версия сохранена.');return}
+  if(a==='start-ask'){const rounds=t.system==='roundrobin'?roundCount(t.players.length):Math.min(t.plannedRounds,roundCount(t.players.length));confirm('Начинаем турнир?',`${t.players.length} участников · ${rounds} туров. Список и правила будут зафиксированы. ${t.mode==='advanced'?'Первый посев — по рейтингу, затем по номеру регистрации.':'Первый посев — по порядку регистрации.'}`,'start-confirm');return}
+  if(a==='start-confirm'){change('Турнир начат',t=>{if(t.mode==='advanced'){t.players.sort((a,b)=>b.rating-a.rating||a.seed-b.seed);t.players.forEach((p,i)=>p.seed=i+1)}t.plannedRounds=t.system==='roundrobin'?roundCount(t.players.length):Math.min(t.plannedRounds,roundCount(t.players.length));addRound(t)});modal.close();navigate(`tour/${t.id}/rounds/1`);return}
+  if(a==='remove-player'){const p=t.players.find(p=>p.id===d.id);confirm('Убрать участника?',`Удалить ${esc(p.name)} из списка? Снимок состава останется в истории.`,'remove-player-confirm','data-id="'+esc(d.id)+'"');return}
+  if(a==='remove-player-confirm'){if(t.status!=='draft')throw new Error('Состав зафиксирован.');change('Удалён участник',t=>{t.players=t.players.filter(p=>p.id!==d.id);if(t.system==='roundrobin'&&t.players.length>=2)t.plannedRounds=roundCount(t.players.length)});modal.close();return}
+  if(a==='bulk'){dialog('Добавить весь список',`<form id="bulk-form"><label class="field">Каждый участник с новой строки<textarea name="players" placeholder="Анна Иванова\nМарк Петров\nСофия Коваленко" required></textarea><small>${t.mode==='advanced'?'Рейтинг можно указать через точку с запятой: Анна Иванова; 1500':'Рейтинги не нужны — только имена.'}</small></label><div class="modal-actions">${button('dismiss','Отмена')}<button type="submit" class="btn primary">Добавить список</button></div></form>`);return}
+  if(a==='settings'){if(t.status!=='draft')throw new Error('Правила зафиксированы.');settingsDialog();return}
+  if(a==='tie-up'||a==='tie-down'){const i=tieOrder.indexOf(d.key),j=i+(a==='tie-up'?-1:1);if(j>=0&&j<tieOrder.length)[tieOrder[i],tieOrder[j]]=[tieOrder[j],tieOrder[i]];document.querySelector('#tie-settings').innerHTML=tieRows(t);return}
+  if(a==='rules'){rulesDialog();return}
+  if(a==='profile'){profileDialog(d.id);return}
+  if(a==='restore-ask'){const item=db.history[t.id]?.find(h=>h.id===d.id);if(!item)throw new Error('Снимок не найден.');confirm('Восстановить версию?',`Вернём состояние до действия «${esc(item.label)}» от ${stamp(item.at)}. Текущее состояние тоже сохранится в истории.`,'restore-confirm','data-id="'+esc(d.id)+'"');return}
+  if(a==='restore-confirm'){const item=db.history[t.id]?.find(h=>h.id===d.id);change('Восстановлена версия из истории',t=>Object.assign(t,clone(item.snapshot)));modal.close();viewRound=current().rounds.length;rankingThrough=null;render();showToast('Версия восстановлена.');return}
+  if(a==='export-all'){download(`tournament-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(db,null,2));showToast('Резервная копия подготовлена.');return}
+  if(a==='export-tour'){const one={...emptyDatabase(),tournaments:[t],history:{[t.id]:db.history[t.id]||[]}};download(`tournament-${t.id.slice(0,8)}.json`,JSON.stringify(one,null,2));return}
+  if(a==='raw-backup'){download('tournament-raw-recovery.json',JSON.stringify({a:stored('tournament-v2-a'),b:stored('tournament-v2-b')},null,2));return}
+  if(a==='legacy'){download('tournament-v1-backup.json',stored('tournament-organizer-v1'));return}
+  if(a==='recover-confirm'){if(!recoveryPending)throw new Error('Сначала выберите копию.');download('tournament-raw-recovery.json',JSON.stringify({a:stored('tournament-v2-a'),b:stored('tournament-v2-b')},null,2));db=recoverDatabase(recoveryPending);fatal='';recoveryPending=null;modal.close();render();showToast('Турниры восстановлены из файла.');return}
+  if(a==='finish-early-ask'){confirm('Завершить турнир сейчас?',`Итоговая таблица будет рассчитана по ${t.rounds.length} завершённым турам. Для свободного тура изменится ограничение вклада в коэффициенты. Полный снимок сохранится в истории.`,'finish-early-confirm');return}
+  if(a==='finish-early-confirm'){if(!t.rounds.length||!t.rounds.at(-1).closed)throw new Error('Сначала завершите текущий тур.');change('Турнир завершён досрочно',t=>{t.plannedRounds=t.rounds.length;t.status='finished'});modal.close();navigate(`tour/${t.id}/ranking`);return}
+  if(a==='import'){document.querySelector('#import-file').click();return}
+  if(a==='csv'){const rows=statistics(t,rankingThrough??t.rounds.length);const quote=s=>'"'+String(s).replace(/"/g,'""')+'"';const headers=['Место','Участник','Очки',...t.tiebreaks.map(k=>TIEBREAKS[k].name),'Партии'];const csv=[headers,...rows.map(p=>[p.rank,/^[=+\-@\t\r]/.test(p.name)?"'"+p.name:p.name,fmt(p.points),...t.tiebreaks.map(k=>fmt(p[k])),p.played])].map(row=>row.map(quote).join(';')).join('\r\n');download('standings.csv','\uFEFF'+csv,'text/csv;charset=utf-8');return}
+  if(a==='print'){window.print();return}
+  if(a==='print-pairs'){dialog('Пары для печати',`<p>Скопируйте список или откройте таблицу мест и сохраните её в PDF через кнопку печати.</p><textarea id="pairs-text" style="width:100%;height:240px;margin-top:15px;padding:12px;border:1px solid var(--line);border-radius:8px" readonly>${esc(pairsText(t))}</textarea><div class="modal-actions">${button('copy-pairs',icon('copy')+' Скопировать','primary')}</div>`);return}
+  if(a==='copy-pairs'){try{await navigator.clipboard.writeText(pairsText(t));showToast('Список пар скопирован.')}catch{document.querySelector('#pairs-text').select();showToast('Выделено. Скопируйте список вручную.')}return}
+  if(a==='tour-menu'){dialog('Действия с турниром',`<div class="stack">${button('export-tour',icon('download')+' Скачать копию турнира')}${button('tab',icon('clock')+' История изменений','','data-target="history"')}${button('rules',icon('info')+' Правила и коэффициенты')}${t.status==='draft'?button('settings',icon('settings')+' Изменить регламент'):''}${t.status==='active'&&t.rounds.at(-1)?.closed?button('finish-early-ask',icon('cup')+' Завершить турнир досрочно'):''}</div>`);return}
+  if(a==='demo'){const demo=createTournament({name:'Кубок шахматной школы',mode:'advanced',system:'swiss',rounds:5});demo.demo=true;demo.players=['Анна Коваленко','Марк Петров','София Мельник','Артём Иванов','Ева Бондарь','Максим Лисенко','Алиса Кравченко','Даниил Шевчук','Мия Савченко','Лев Мороз'].map((name,i)=>({id:uid(),name,seed:i+1,rating:1600-i*57}));for(let r=0;r<3;r++){addRound(demo);demo.rounds.at(-1).matches.forEach((m,i)=>{if(r<2||i===0)m.result=['1-0','½-½','0-1'][((i*2)+r)%3]});if(r<2)closeRound(demo)}create(demo);return}
+}
+function pairsText(t) {const names=new Map(t.players.map(p=>[p.id,p.name]));return `${t.name} — тур ${viewRound}\n\n`+t.rounds[viewRound-1].matches.map((m,i)=>m.black===null?`${names.get(m.white)} — свободный тур, ${m.byePoints} очк.`:`${i+1}. ${names.get(m.white)} — ${names.get(m.black)}: ${m.result||'ожидаем результат'}`).join('\n')}
+async function submit(form) {
+  const data=Object.fromEntries(new FormData(form));
+  if(form.id==='create-form'){if(!data.name.trim())throw new Error('Введите название турнира.');create(createTournament({...data,rounds:data.rounds||5}));return}
+  if(form.id==='add-player-form'){addPlayers([data]);const input=document.querySelector('#add-player-form [name=name]');input?.focus();return}
+  if(form.id==='bulk-form'){const items=data.players.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const [name,rating]=line.split(';');return{name,rating:rating||0}});if(!items.length)throw new Error('Вставьте хотя бы одно имя.');addPlayers(items);modal.close();showToast('Список участников добавлен.');return}
+  if(form.id==='settings-form'){if(current().status!=='draft')throw new Error('Правила зафиксированы.');if(!tieOrder.length)throw new Error('Выберите хотя бы один коэффициент.');change('Изменён регламент',t=>{t.name=data.name.trim();t.control=data.control;t.plannedRounds=t.system==='roundrobin'?t.plannedRounds:Number(data.rounds);t.tiebreaks=[...tieOrder]});modal.close();showToast('Регламент сохранён.');return}
+}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el||el.disabled)return;if(modal.open&&!modal.contains(el))return;Promise.resolve(act(el.dataset.action,el.dataset)).then(()=>{if(['tab','home','open-history'].includes(el.dataset.action)&&modal.open)modal.close()}).catch(e=>showToast(e.message,true))});
+document.addEventListener('submit',e=>{if(!['create-form','add-player-form','bulk-form','settings-form'].includes(e.target.id))return;e.preventDefault();Promise.resolve(submit(e.target)).catch(e=>showToast(e.message,true))});
+document.addEventListener('change',async e=>{
+  try{
+    if(e.target.id==='filter'){filter=e.target.value;render()}
+    if(e.target.id==='ranking-through'){rankingThrough=e.target.value==='all'?null:Number(e.target.value);render()}
+    if(e.target.dataset.tie){const k=e.target.dataset.tie;if(e.target.checked)tieOrder.push(k);else tieOrder=tieOrder.filter(x=>x!==k);document.querySelector('#tie-settings').innerHTML=tieRows(current())}
+    if(e.target.closest('#create-form')&&['mode','system'].includes(e.target.name)){
+      const fields=Object.fromEntries(new FormData(document.querySelector('#create-form')));wizard={mode:fields.mode,system:fields.system};render();const f=document.querySelector('#create-form');for(const [k,v] of Object.entries(fields)){if(['mode','system'].includes(k))continue;const input=f.elements[k];if(input)input.value=v}
+    }
+    if(e.target.id==='import-file'){
+      const file=e.target.files[0];if(!file)return;if(file.size>8*1024*1024)throw new Error('Слишком большой файл. Максимум — 8 МБ.');
+      const incoming=validateDatabase(JSON.parse(await file.text()));if(!incoming.tournaments.length)throw new Error('В копии нет турниров.');
+      const next=clone(db);if(next.tournaments.length+incoming.tournaments.length>100)throw new Error('Слишком много турниров.');
+      for(const t of incoming.tournaments){const oldId=t.id;t.id=uid();t.name=(t.name+' · копия').slice(0,100);next.tournaments.unshift(t);next.history[t.id]=(incoming.history[oldId]||[]).map(h=>({...h,id:uid(),snapshot:{...h.snapshot,id:t.id}}))}
+      if(fatal){recoveryPending=next;confirm('Восстановить из файла?',`Проверено турниров: ${incoming.tournaments.length}. Перед восстановлением исходные повреждённые данные будут скачаны отдельным файлом. После этого запишем проверенную копию.`,'recover-confirm');return}
+      save(next);render();showToast(`Восстановлено турниров: ${incoming.tournaments.length}.`);
+    }
+  }catch(e){showToast(e.message,true)}
+});
+window.addEventListener('hashchange',()=>{render();window.scrollTo({top:0,behavior:'instant'})});
+window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=loadDatabase();if(modal.open)modal.close();render();showToast('Получены изменения из другой вкладки.')}catch(e){fatal=e.message;render()}});
+window.addEventListener('online',render);window.addEventListener('offline',render);
+modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+render();
