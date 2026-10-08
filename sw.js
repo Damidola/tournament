@@ -1,4 +1,4 @@
-const CACHE = 'tournament-shell-v2.0.0';
+const CACHE = 'tournament-shell-v2.1.0';
 const FILES = ['./', './index.html', './style.css', './app.js', './engine.js', './storage.js', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES))));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('tournament-shell-') && k !== CACHE).map(k => caches.delete(k))))));
