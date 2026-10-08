@@ -4,10 +4,10 @@ export const RESULTS = {
   '+-': [1, 0], '-+': [0, 1], '--': [0, 0]
 };
 export const TIEBREAKS = {
-  bhc1: { name: 'Бухгольц без худшего', short: 'БХ−1' },
+  bhc1: { name: 'Бухгольц без найгіршого', short: 'БХ−1' },
   bh: { name: 'Бухгольц', short: 'БХ' },
   sb: { name: 'Зоннеборн — Бергер', short: 'ЗБ' },
-  wins: { name: 'Победы за доской', short: 'Победы' }
+  wins: { name: 'Перемоги за дошкою', short: 'Перемоги' }
 };
 export const uid = () => globalThis.crypto.randomUUID();
 export const fmt = n => new Intl.NumberFormat('ru', { maximumFractionDigits: 2 }).format(n);
@@ -97,7 +97,7 @@ export function swiss(t) {
   const rows = statistics(t), number = t.rounds.length + 1;
   const ordered = [...rows].sort((a, b) => b.points - a.points || a.seed - b.seed);
   const candidates = ordered.length % 2 ? [...ordered].reverse().filter(p => p.byes === 0 && !p.entries.some(e => e.kind === 'forfeit' && e.score === 1)) : [null];
-  if (!candidates.length) throw new Error('Не осталось игроков, которым можно дать свободный тур. Завершите турнир или выберите другой формат.');
+  if (!candidates.length) throw new Error('Не залишилося гравців, яким можна дати вільний тур. Завершіть турнір або оберіть інший формат.');
   for (const bye of candidates) {
     const pool = ordered.filter(p => p !== bye);
     let nodes = 0;
@@ -120,38 +120,38 @@ export function swiss(t) {
       return matches;
     }
   }
-  throw new Error('Без повторных встреч пары не складываются. Завершите турнир: повторы автоматически не добавляются.');
+  throw new Error('За заборони повторних зустрічей пари не складаються. Завершіть турнір: повтори автоматично не додаються.');
 }
 
 export function addRound(t) {
-  if (t.players.length < 2) throw new Error('Добавьте хотя бы двух участников.');
-  if (t.rounds.some(r => !r.closed)) throw new Error('Сначала завершите текущий тур.');
-  if (t.rounds.length >= t.plannedRounds) throw new Error('Все запланированные туры уже созданы.');
+  if (t.players.length < 2) throw new Error('Додайте щонайменше двох учасників.');
+  if (t.rounds.some(r => !r.closed)) throw new Error('Спочатку завершіть поточний тур.');
+  if (t.rounds.length >= t.plannedRounds) throw new Error('Усі заплановані тури вже створено.');
   const matches = t.system === 'roundrobin' ? roundRobin(t, t.rounds.length + 1) : swiss(t);
   t.rounds.push({ number: t.rounds.length + 1, closed: false, matches }); t.status = 'active';
 }
 export function closeRound(t) {
   const r = t.rounds.at(-1);
-  if (!r || r.closed) throw new Error('Нет открытого тура.');
-  if (r.matches.some(m => m.black !== null && !RESULTS[m.result])) throw new Error('Сначала внесите результаты всех партий.');
+  if (!r || r.closed) throw new Error('Немає відкритого туру.');
+  if (r.matches.some(m => m.black !== null && !RESULTS[m.result])) throw new Error('Спочатку внесіть результати всіх партій.');
   r.closed = true;
   if (t.rounds.length === t.plannedRounds) t.status = 'finished';
 }
 export function rollback(t, number) {
-  if (!Number.isInteger(number) || number < 1 || number > t.rounds.length) throw new Error('Такого тура нет.');
+  if (!Number.isInteger(number) || number < 1 || number > t.rounds.length) throw new Error('Такого туру немає.');
   t.rounds = t.rounds.slice(0, number); t.rounds.at(-1).closed = false; t.status = 'active';
 }
 export function setResult(t, round, id, result) {
   const r = t.rounds[round - 1];
-  if (!r || r.closed || round !== t.rounds.length) throw new Error('Чтобы исправить этот тур, сначала вернитесь к нему.');
+  if (!r || r.closed || round !== t.rounds.length) throw new Error('Щоб виправити цей тур, спочатку поверніться до нього.');
   const m = r.matches.find(m => m.id === id);
-  if (!m || m.black === null || (result !== null && !Object.hasOwn(RESULTS, result))) throw new Error('Некорректный результат.');
+  if (!m || m.black === null || (result !== null && !Object.hasOwn(RESULTS, result))) throw new Error('Некоректний результат.');
   m.result = result;
 }
 
 export function validateTournament(value) {
   const t = clone(value);
-  const fail = () => { throw new Error('Файл содержит некорректные данные турнира. Импорт отменён.'); };
+  const fail = () => { throw new Error('Файл містить некоректні дані турніру. Імпорт скасовано.'); };
   const validId = id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id) && !['__proto__','constructor','prototype'].includes(id);
   if (!t || typeof t !== 'object' || !validId(t.id) ||
       typeof t.name !== 'string' || !t.name.trim() || t.name.length > 100 || !['simple', 'advanced'].includes(t.mode) ||

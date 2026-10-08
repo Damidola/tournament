@@ -44,15 +44,15 @@ async function noOverflow(page){assert(await page.evaluate(()=>document.document
   await p.locator('.match-card').first().locator('[data-result="0-1"]').click();
   assert.equal((await database(p)).tournaments[0].rounds[0].matches[0].result,'0-1');
   await p.locator('.tabs [data-target=history]').click();
-  await p.locator('.history-item').filter({hasText:'Возврат к туру 1'}).locator('[data-action=restore-ask]').click();await p.locator('[data-action=restore-confirm]').click();
+  await p.locator('.history-item').filter({hasText:'Повернення до туру 1'}).locator('[data-action=restore-ask]').click();await p.locator('[data-action=restore-confirm]').click();
   const restored=(await database(p)).tournaments[0];assert.equal(restored.rounds.length,3);assert.equal(restored.rounds[0].matches[0].result,'1-0');
   await p.locator('.tabs [data-target=ranking]').click();await noOverflow(p);
   await p.locator('#ranking-through').selectOption('1');
-  await p.locator('.ranking-mobile [data-action=profile]').first().click();await p.locator('#modal-title').waitFor();assert((await p.locator('.modal-body').textContent()).includes('после тура 1'));await p.locator('[data-action=dismiss]').click();
+  await p.locator('.ranking-mobile [data-action=profile]').first().click();await p.locator('#modal-title').waitFor();assert((await p.locator('.modal-body').textContent()).includes('після туру 1'));await p.locator('[data-action=dismiss]').click();
   const downloading=p.waitForEvent('download');await p.locator('.footnote [data-action=export-tour]').click();const download=await downloading;const saved=await download.path();
   const backup=JSON.parse(fs.readFileSync(saved,'utf8'));assert.equal(backup.tournaments[0].rounds.length,3);
   await p.locator('.mobile-nav [data-target=backup]').click();await p.locator('#import-file').setInputFiles(saved);
-  await p.waitForFunction(()=>document.querySelector('#toast').textContent.includes('Восстановлено турниров: 1'));
+  await p.waitForFunction(()=>document.querySelector('#toast').textContent.includes('Відновлено турнірів: 1'));
   assert.equal((await database(p)).tournaments.length,2);
   // Recover explicitly from damaged slots. The untouched slot is retained.
   await p.evaluate(()=>{localStorage.setItem('tournament-v2-a','damaged-a');localStorage.setItem('tournament-v2-b','damaged-b')});await p.reload();

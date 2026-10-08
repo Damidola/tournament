@@ -79,7 +79,7 @@ test('Swiss generates unique pairings and no repeated bye over varied tournament
   for(let n=3;n<=24;n++)for(let run=0;run<3;run++){
     const t=tournament(n,'swiss',Math.min(5,roundCount(n)));let completed=0;
     for(let r=0;r<t.plannedRounds;r++){
-      try{addRound(t)}catch(e){assert.match(e.message,/Без повторных/);break}
+      try{addRound(t)}catch(e){assert.match(e.message,/повторних зустрічей/);break}
       t.rounds.at(-1).matches.forEach((m,i)=>{if(m.black!==null)m.result=['1-0','½-½','0-1'][(r+i+run)%3]});closeRound(t);completed++;validateTournament(t);
     }
     assert(completed>=Math.min(3,t.plannedRounds));
