@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Простий робочий простір для організації шахового турніру: учасники, пари, результати й таблиця.">
+  <title>Турнір — шаховий турнір</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--paper:#f4f1e8;--ink:#20251f;--muted:#777c70;--line:#deddd2;--green:#365b46;--lime:#cce56d;--white:#fffef9;--orange:#d87149;--shadow:0 20px 60px #26382c12}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Manrope,system-ui,sans-serif}button,input{font:inherit}button{cursor:pointer}.mono{font:12px 'DM Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+    .shell{max-width:1240px;margin:auto;padding:28px 40px 60px}.topbar{height:48px;display:flex;align-items:center;justify-content:space-between;margin-bottom:56px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.04em;font-size:19px}.brand-mark{width:32px;height:32px;display:grid;place-items:center;background:var(--green);color:var(--lime);border-radius:10px;font-size:17px}.top-right{display:flex;align-items:center;gap:20px}.live{display:flex;align-items:center;gap:8px}.dot{width:8px;height:8px;border-radius:50%;background:#83a950;box-shadow:0 0 0 4px #83a95024}.avatar{width:34px;height:34px;display:grid;place-items:center;background:#e6d4b8;border-radius:50%;font-size:12px;font-weight:800}
+    .hero{display:grid;grid-template-columns:1fr 360px;gap:44px;align-items:end;margin-bottom:42px}.eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:17px}.eyebrow:before{content:'';height:1px;width:28px;background:var(--orange)}h1{font-size:clamp(44px,6.6vw,78px);line-height:.98;letter-spacing:-.075em;margin:0 0 22px;font-weight:600}h1 span{color:var(--green)}.intro{max-width:560px;color:#686d63;font-size:16px;line-height:1.7;margin:0}.tournament-card{background:var(--green);color:var(--white);padding:23px 25px;border-radius:17px;position:relative;overflow:hidden;box-shadow:var(--shadow)}.tournament-card:after{content:'♞';position:absolute;right:5px;bottom:-59px;font:190px Georgia;color:#ffffff0b}.card-label{color:#c5cfbc}.card-title{font-size:20px;font-weight:700;margin:9px 0 18px;letter-spacing:-.03em}.card-meta{display:flex;gap:20px;color:#d6dccf;font-size:12px}.card-meta b{display:block;color:white;font-size:14px;margin-top:3px}.status-tag{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #ffffff35;border-radius:30px;color:#e9f0d6;font-size:11px}
+    .workspace{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:start}.panel{background:var(--white);border:1px solid #e9e7dc;border-radius:16px;box-shadow:var(--shadow);overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:21px 23px 17px;border-bottom:1px solid var(--line)}h2{font-size:16px;letter-spacing:-.03em;margin:0;font-weight:800}.head-sub{margin-top:4px;color:var(--muted);font-size:12px}.count{background:#eff1e8;color:var(--green);border-radius:30px;padding:5px 9px;font:11px 'DM Mono',monospace}.add-form{display:flex;gap:8px;padding:15px 22px;border-bottom:1px solid var(--line)}.add-form input{flex:1;min-width:0;border:1px solid var(--line);background:#fbfaf5;border-radius:8px;padding:10px 12px;outline:none}.add-form input:focus{border-color:var(--green)}.add-form button,.primary{border:0;border-radius:8px;background:var(--green);color:white;padding:0 15px;font-size:12px;font-weight:700}.player-list{padding:0 22px}.player{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;min-height:55px;border-bottom:1px solid #eeede5}.player:last-child{border:0}.seed{font:11px 'DM Mono',monospace;color:#9a9d91}.player-name{font-size:13px;font-weight:700}.player-note{font-size:11px;color:var(--muted);margin-top:2px}.player-rating{font:12px 'DM Mono',monospace;color:#777c70}.player-actions{display:flex;gap:4px}.icon-button{border:0;background:transparent;color:#90948a;font-size:16px;padding:4px 6px;border-radius:6px}.icon-button:hover{background:#f0efe7;color:var(--ink)}.panel-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px}.board{padding:19px 22px 21px}.round-select{border:1px solid var(--line);border-radius:7px;background:#fbfaf5;padding:7px 9px;font:11px 'DM Mono',monospace;color:var(--ink)}.round-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.match{display:grid;grid-template-columns:1fr 36px 1fr 68px;gap:8px;align-items:center;padding:11px 0;border-bottom:1px solid #eeede5}.match:last-child{border:0}.side{font-size:12px;font-weight:700}.side:last-of-type{text-align:right}.side em{font-style:normal;color:var(--muted);font-weight:500}.vs{font:10px 'DM Mono',monospace;text-align:center;color:#a4a69d}.result{width:68px;border:1px solid var(--line);border-radius:6px;background:#fbfaf5;padding:6px 4px;text-align:center;font:11px 'DM Mono',monospace;color:var(--green)}.result:hover{border-color:var(--green)}.empty{padding:20px 0;color:var(--muted);font-size:12px}.standings{margin-top:18px}.standings .panel-head{padding:17px 22px}.table-wrap{overflow-x:auto}.table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}.table th{font:10px 'DM Mono',monospace;text-transform:uppercase;color:#9a9d91;text-align:left;padding:11px 10px}.table td{border-top:1px solid #eeede5;padding:10px}.table th:first-child,.table td:first-child{padding-left:22px}.table th:last-child,.table td:last-child{padding-right:22px;text-align:right}.rank{font:11px 'DM Mono',monospace;color:#85897f}.score{font-weight:800;color:var(--green)}.notice{display:flex;gap:11px;align-items:center;padding:13px 15px;background:#edf1e6;border-radius:9px;color:#53634f;font-size:11px;margin-top:15px}.notice span{font-size:16px}.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#20251f;color:white;padding:11px 16px;border-radius:9px;font-size:12px;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}.footer{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:42px;padding-top:18px;color:var(--muted);font-size:11px}.footer a{color:var(--green);text-decoration:none}
+    @media(max-width:850px){.shell{padding:22px 22px 45px}.topbar{margin-bottom:40px}.hero{grid-template-columns:1fr;gap:24px}.tournament-card{max-width:none}.workspace{grid-template-columns:1fr}}
+    @media(max-width:520px){.shell{padding:16px 14px 32px}.topbar{margin-bottom:32px}.top-right .live{display:none}.hero{margin-bottom:25px}h1{font-size:48px}.intro{font-size:14px}.panel-head{padding:17px}.add-form{padding:12px}.player-list{padding:0 12px}.board{padding:15px 13px}.match{grid-template-columns:1fr 24px 1fr 58px;gap:4px}.result{width:58px}.standings .panel-head{padding:15px}.table th:first-child,.table td:first-child{padding-left:14px}.table th:last-child,.table td:last-child{padding-right:14px}.footer{gap:14px;flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">♞</span> турнір<span style="color:#9ca294">.</span></div>
+      <div class="top-right"><div class="live mono"><i class="dot"></i> турнір триває</div><div class="avatar" title="Організатор">ОК</div></div>
+    </header>
+    <main>
+      <section class="hero">
+        <div><div class="eyebrow mono">робочий простір організатора</div><h1>Граємо<br><span>на перемогу.</span></h1><p class="intro">Усе для шахового турніру — в одному місці. Додавайте гравців, формуйте пари, записуйте результати й стежте за таблицею.</p></div>
+        <aside class="tournament-card"><div class="card-label mono">поточний турнір</div><div class="card-title">Кубок вихідного дня</div><div class="card-meta"><div>ФОРМАТ<b>Кругова система</b></div><div>КОНТРОЛЬ<b>10 + 5 хв</b></div><div>ТУР<b id="roundStat">01 / 01</b></div></div></aside>
+      </section>
+      <section class="workspace">
+        <div>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Учасники</h2><div class="head-sub">Список гравців турніру</div></div><span class="count" id="playerCount">00 ГРАВЦІВ</span></div>
+            <form class="add-form" id="addForm"><input id="playerInput" aria-label="Ім'я гравця" placeholder="Ім’я нового гравця" maxlength="40" required><button type="submit">Додати +</button></form>
+            <div class="player-list" id="playerList"></div>
+            <div class="panel-foot"><span>Рейтинг у списку — для довідки</span><button class="icon-button" id="clearAll" title="Очистити список" aria-label="Очистити список">↺</button></div>
+          </article>
+          <article class="panel standings">
+            <div class="panel-head"><div><h2>Турнірна таблиця</h2><div class="head-sub">Поточні результати та очки</div></div><span class="mono">LIVE · <span id="standingsRound">ТУР 01</span></span></div>
+            <div class="table-wrap"><table class="table"><thead><tr><th>Місце</th><th>Гравець</th><th>І</th><th>В</th><th>Н</th><th>П</th><th>Очки</th></tr></thead><tbody id="standingsBody"></tbody></table></div>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Пари та результати</h2><div class="head-sub">Виберіть результат після партії</div></div><select class="round-select" id="roundSelect" aria-label="Оберіть тур"></select></div>
+          <div class="board" id="pairings"></div>
+        </article>
+      </section>
+      <div class="notice"><span>✳</span><div><b>Зміни зберігаються автоматично</b><br>Дані залишаються у цьому браузері на вашому пристрої.</div></div>
+    </main>
+    <footer class="footer"><span>♞ &nbsp;Турнір — простий інструмент організатора</span><span>Зроблено для хорошої гри&nbsp; ↗</span></footer>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    const defaults = [
+      {id:'p1',name:'Марія Коваль',rating:1842},{id:'p2',name:'Андрій Шевчук',rating:1760},
+      {id:'p3',name:'Олена Бондар',rating:1698},{id:'p4',name:'Дмитро Лисенко',rating:1615},
+      {id:'p5',name:'Софія Мельник',rating:1540},{id:'p6',name:'Тарас Гнатюк',rating:1488}
+    ];
+    const STORAGE='tournament-organizer-v1';
+    let state;
+    try { state=JSON.parse(localStorage.getItem(STORAGE)) || {players:defaults,results:{}}; } catch { state={players:defaults,results:{}}; }
+    if(!state.players || !state.results) state={players:defaults,results:{}};
+    const $=s=>document.querySelector(s);
+    const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function save(){localStorage.setItem(STORAGE,JSON.stringify(state));render()}
+    function getRounds(){return Math.max(1,state.players.length-1)}
+    function roundPairs(round){
+      const list=state.players.slice(); if(list.length<2)return [];
+      if(list.length%2)list.push(null);
+      const fixed=list[0], rest=list.slice(1), n=list.length;
+      for(let i=1;i<round;i++)rest.unshift(rest.pop());
+      const rotated=[fixed,...rest]; const pairs=[];
+      for(let i=0;i<n/2;i++){let a=rotated[i],b=rotated[n-1-i];if(a&&b)pairs.push({white:a,black:b});else if(a||b)pairs.push({bye:a||b})}
+      return pairs;
+    }
+    function key(round,a,b){return `${round}:${a}:${b}`}
+    function currentRound(){let n=Number($('#roundSelect')?.value||1);return Math.min(Math.max(n,1),getRounds())}
+    function scoreFor(p){let w=0,d=0,l=0,points=0;for(let r=1;r<=getRounds();r++)for(const m of roundPairs(r)){if(!m.white||!m.black)continue;const res=state.results[key(r,m.white.id,m.black.id)];if(!res)continue;if(res==='1-0'){if(m.white.id===p.id){w++;points++}else{l++}}else if(res==='0-1'){if(m.black.id===p.id){w++;points++}else{l++}}else{d++;points+=.5}}return {w,d,l,points,played:w+d+l}}
+    function render(){
+      $('#playerCount').textContent=`${String(state.players.length).padStart(2,'0')} ГРАВЦІВ`;
+      $('#playerList').innerHTML=state.players.length?state.players.map((p,i)=>`<div class="player"><span class="seed">${String(i+1).padStart(2,'0')}</span><div><div class="player-name">${esc(p.name)}</div><div class="player-note">${p.rating?'Шаховий клуб':'Новий учасник'}</div></div><div class="player-actions"><span class="player-rating">${p.rating||'—'}</span><button class="icon-button remove" data-id="${esc(p.id)}" aria-label="Видалити ${esc(p.name)}" title="Видалити">×</button></div></div>`).join(''):'<div class="empty">Поки немає учасників. Додайте першого гравця вище.</div>';
+      const rounds=getRounds(), old=currentRound();
+      $('#roundSelect').innerHTML=Array.from({length:rounds},(_,i)=>`<option value="${i+1}">ТУР ${String(i+1).padStart(2,'0')}</option>`).join('');$('#roundSelect').value=Math.min(old,rounds);
+      $('#roundStat').textContent=`${String(currentRound()).padStart(2,'0')} / ${String(rounds).padStart(2,'0')}`;$('#standingsRound').textContent=`ТУР ${String(currentRound()).padStart(2,'0')}`;
+      renderPairings();renderStandings();
+    }
+    function renderPairings(){const round=currentRound(),pairs=roundPairs(round);if(state.players.length<2){$('#pairings').innerHTML='<div class="empty">Додайте щонайменше двох гравців, щоб сформувати пари.</div>';return}
+      $('#pairings').innerHTML=`<div class="round-head"><span class="mono">${pairs.length} ПАР · КЛАСИЧНА КРУГОВА СИСТЕМА</span></div>${pairs.map((m,i)=>{if(m.bye)return `<div class="match"><div class="side">${esc(m.bye.name)} <em>— вільний тур</em></div><div class="vs">BYE</div><div></div><div></div></div>`;const k=key(round,m.white.id,m.black.id),result=state.results[k]||'—';return `<div class="match"><div class="side">${esc(m.white.name)}</div><div class="vs">VS</div><div class="side" style="text-align:right">${esc(m.black.name)}</div><button class="result" data-key="${esc(k)}" title="Натисніть, щоб змінити результат">${result}</button></div>`}).join('')}<div class="panel-foot" style="padding:14px 0 0;margin-top:8px"><span>Натисніть на результат, щоб змінити його</span><span>½ = нічия</span></div>`;
+    }
+    function renderStandings(){const rows=state.players.map(p=>({p,...scoreFor(p)})).sort((a,b)=>b.points-a.points||b.w-a.w||b.p.rating-a.p.rating);$('#standingsBody').innerHTML=rows.length?rows.map((r,i)=>`<tr><td class="rank">${String(i+1).padStart(2,'0')}</td><td style="font-weight:700">${esc(r.p.name)}</td><td>${r.played}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td class="score">${Number.isInteger(r.points)?r.points:r.points.toFixed(1)}</td></tr>`).join(''):'<tr><td colspan="7" style="color:#777;padding:16px 22px">Додайте учасників, щоб побачити таблицю.</td></tr>'}
+    $('#addForm').addEventListener('submit',e=>{e.preventDefault();const input=$('#playerInput'),name=input.value.trim();if(!name)return;state.players.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name,rating:0});input.value='';save();showToast(`${name} додано до турніру`)});
+    $('#playerList').addEventListener('click',e=>{const b=e.target.closest('.remove');if(!b)return;const id=b.dataset.id;state.players=state.players.filter(p=>p.id!==id);state.results={};save();showToast('Гравця видалено. Пари оновлено.')});
+    $('#roundSelect').addEventListener('change',render);
+    $('#pairings').addEventListener('click',e=>{const b=e.target.closest('.result');if(!b)return;const vals=['—','1-0','½-½','0-1'],current=b.textContent,next=vals[(vals.indexOf(current)+1)%vals.length];if(next==='—')delete state.results[b.dataset.key];else state.results[b.dataset.key]=next==='½-½'?'½-½':next;save()});
+    $('#clearAll').addEventListener('click',()=>{state={players:[],results:{}};save();showToast('Список очищено')});
+    let toastTimer;function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2000)}
+    render();
+  </script>
+</body>
+</html>
