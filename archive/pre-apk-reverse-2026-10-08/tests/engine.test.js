@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createTournament, statistics, roundCount, roundRobin, addRound, closeRound, rollback, setResult, setBoardResult, setKnockoutWinner, validateTournament } from '../engine.js';
+import { createTournament, statistics, roundCount, roundRobin, addRound, closeRound, rollback, setResult, validateTournament } from '../engine.js';
 
 function tournament(n=4,system='swiss',rounds=3) {
   const t=createTournament({name:'Контрольный турнир',system,rounds});
@@ -89,20 +89,4 @@ test('import rejects invalid opponents, inherited result keys, duplicate pairs a
   for(const mutate of [t=>t.rounds[0].matches[0].black='missing',t=>t.rounds[0].matches[0].result='constructor',t=>t.tiebreaks=['toString'],t=>t.rounds[0].closed=false,t=>t.rounds[1].matches=t.rounds[0].matches]){
     const t=fixture();mutate(t);assert.throws(()=>validateTournament(t));
   }
-});
-
-test('Dutch Swiss keeps an auditable strict pairing snapshot',()=>{
-  const t=tournament(6,'swissDutch',3); addRound(t); assert.equal(t.audit.length,1); for(const m of t.rounds[0].matches)if(m.black)m.result='1-0'; closeRound(t); addRound(t); validateTournament(t); assert.equal(t.audit.length,2);
-});
-
-test('Arena can keep running after the unique round-robin cycle',()=>{
-  const t=tournament(3,'arena',5); for(let i=0;i<5;i++){addRound(t);for(const m of t.rounds.at(-1).matches)if(m.black)m.result='½-½';closeRound(t)} validateTournament(t); assert.equal(t.rounds.length,5);
-});
-
-test('Team Swiss records board results as match points and game points',()=>{
-  const t=createTournament({name:'Командний контроль',system:'teamSwiss',rounds:2,boardCount:2}); t.players=[1,2,3,4].map((id)=>({id:String(id),name:'P'+id,seed:id,rating:0})); t.teams=[{id:'a',name:'А',seed:1,players:['1','2']},{id:'b',name:'Б',seed:2,players:['3','4']}]; addRound(t); const match=t.rounds[0].matches[0]; setBoardResult(t,1,match.id,0,'1-0'); setBoardResult(t,1,match.id,1,'½-½'); closeRound(t); assert.deepEqual(statistics(t).map(x=>[x.mp,x.gp]),[[2,1.5],[0,0.5]]); validateTournament(t);
-});
-
-test('Knockout requires a winner for a drawn match and supports rollback',()=>{
-  const t=tournament(3,'knockout',2); addRound(t); const live=t.rounds[0].matches.find(m=>!m.bye); live.result='½-½'; assert.throws(()=>closeRound(t),/тай-брейк/); setKnockoutWinner(t,1,live.id,live.white); for(const m of t.rounds[0].matches)if(m.bye)m.winner=m.white; closeRound(t); addRound(t); for(const m of t.rounds[1].matches)if(m.black){m.result='1-0';m.winner=m.white} closeRound(t); assert.equal(t.status,'finished'); rollback(t,1); validateTournament(t); assert.equal(t.rounds.length,1);
 });

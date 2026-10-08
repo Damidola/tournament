@@ -6,12 +6,6 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{body{background:#fff;color:#000}.sidebar,.topbar,.mobile-nav,.tabs,.page-footer,.btn,.rounds-tabs,.footnote,.summary,.page-heading,.ranking-mobile,dialog,#toast{display:none!important}.main{margin:0;padding:0;max-width:none}.ranking-desktop{display:block!important}.panel{border:0;border-radius:0}.print-header{display:block;margin-bottom:20px}.print-header h1{font-size:25px}.rank-table{font-size:10px}.rank-table td,.rank-table th{padding:8px}.rank-table tr{break-inside:avoid}.rank-table tr:first-child td{background:transparent}.rules{font-size:9px}.panel-head{padding:10px 0}.print-header p{font-size:11px;margin-top:8px}}
 .language-switch{min-height:34px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--green);font-size:11px;font-weight:600}
-.team-boards{display:grid;gap:9px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
-.board-result-row{display:grid;grid-template-columns:58px minmax(0,1fr) minmax(168px,.75fr);align-items:center;gap:8px;font-size:11px;color:var(--muted)}
-.board-result-row .results{margin:0}
-.team-card{align-items:flex-start}
-.team-card .small{line-height:1.5}
-@media(max-width:700px){.board-result-row{grid-template-columns:1fr;gap:5px}.board-result-row .results{width:100%}.board-result-row .result-btn{min-height:40px}.team-boards{gap:12px}}
 @media(max-width:700px){
   .language-switch{min-height:32px;padding:4px 6px;font-size:10px}
   .topbar-right{gap:6px}
