@@ -29,7 +29,7 @@ jobs:
         run: |
           node --check app.js
           mkdir -p public
-          cp index.html app.js screen-views.js engine.js storage.js i18n.js trf.js apk-core.js mobile.css sw.js icon.svg manifest.webmanifest public/
+          cp index.html app.js live-share.js ratings-sync.js screen-views.js engine.js storage.js i18n.js trf.js apk-core.js mobile.css sw.js icon.svg manifest.webmanifest public/
           cp -r assets public/assets
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

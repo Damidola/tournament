@@ -8,19 +8,21 @@ const materialNames = {
 const solidIcon = name => `<span class="icon material-icon native-solid-icon" aria-hidden="true">${materialNames[name] || materialNames.bars}</span>`;
 const chevron = '<span class="icon material-icon native-chevron" aria-hidden="true">chevron_right</span>';
 
-export function renderAccount({ button, esc, theme = 'light' }) {
+export function renderAccount({ button, esc, theme = 'light', simpleMode=true, accent='green', accentNames={} }) {
   const themes = { light: 'Світла тема', dark: 'Темна тема', system: 'Як на пристрої' };
   return `<section class="account-screen native-screen">
     <section class="native-card account-card">
-      <div class="account-card-heading"><span class="account-avatar">${solidIcon('account')}</span><div><h2>Обліковий запис</h2><p>Вхід не виконано</p></div><span class="account-status-icon">${solidIcon('account')}</span></div>
-      ${button('google-signin', '<img class="google-logo" src="./assets/google.png" alt=""><span>Увійти через Google</span>', 'account-google')}
+      <div class="account-card-heading"><span class="account-avatar">${solidIcon('account')}</span><div><h2>Обліковий запис</h2><p>Дані на цьому пристрої</p></div><span class="account-status-icon">${solidIcon('account')}</span></div>
+      <p class="account-local-note">Працює без реєстрації</p>
     </section>
     <section class="native-card cloud-card">
       <h2>${solidIcon('cloud')}<span>Хмарна резервна копія</span></h2>
-      <p>Зберігайте турніри, гравців і дані застосунку в підключеному хмарному обліковому записі, щоб відновити їх на іншому пристрої.</p>
-      ${button('cloud-backup', solidIcon('account') + '<span class="cloud-button-label">Увійдіть, щоб використовувати хмарну копію</span>', 'primary account-backup-button')}
+      <p>Збережіть турніри й профілі у хмару та відновлюйте на іншому пристрої за кодом доступу. Без входу в Google.</p>
+      ${button('cloud-backup', solidIcon('cloud') + '<span class="cloud-button-label">Резервні копії</span>', 'primary account-backup-button')}
     </section>
     ${button('theme-choose', `<span class="account-setting-icon">${solidIcon('sun')}</span><span class="account-setting-text"><strong>Тема</strong><span>${esc(themes[theme] || themes.light)}</span></span>${chevron}`, 'native-card theme-card')}
+    ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.green}</span></span>${chevron}`,'native-card theme-card')}
+    ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Спрощений режим</strong><span>${simpleMode?'Увімкнено · для дитячих турнірів':'Вимкнено · рейтинги й аналіз'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
     <details class="native-card account-information"><summary>Інформація${chevron}</summary>${renderInfo({button})}</details>
   </section>`;
 }
@@ -100,10 +102,10 @@ const recordLeaders = (rows, metric) => {
   return { value, leaders: value > 0 ? rows.filter(p => p[metric] === value) : [] };
 };
 
-export function renderStatistics(db, { button, esc, fmt, kind = 'players' }) {
+export function renderStatistics(db, { button, esc, fmt, kind = 'players', simpleMode=true }) {
   const data = collectStatistics(db), team = kind === 'teams', rows = team ? data.teams : data.players;
   const overview = team ? data.teamOverview : data.overview;
-  const metrics = team ? ['wins', 'draws', 'tournamentWins'] : ['wins', 'draws', 'tournamentWins', 'eloGain'];
+  const metrics = team ? ['wins', 'draws', 'tournamentWins'] : ['wins', 'draws', 'tournamentWins', ...(!simpleMode?['eloGain']:[])];
   return `<section class="statistics-screen native-screen"><h2 class="stats-section-heading">Огляд</h2>
     <div class="stats-overview">${[['tournaments', 'Турніри'], ['participants', team ? 'Команди' : 'Учасники'], ['games', team ? 'Матчі' : 'Партії'], ['draws', 'Нічиї']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(overview[field])}</strong></div>`).join('')}</div>
     <div class="stats-kind-tabs">${button('stats-kind', 'Гравці', kind === 'players' ? 'primary selected' : '', 'data-kind="players" aria-pressed="' + (kind === 'players') + '"')}${button('stats-kind', 'Команди', team ? 'primary selected' : '', 'data-kind="teams" aria-pressed="' + team + '"')}</div>
@@ -123,8 +125,8 @@ export function renderStatisticsRecord(db, { button, esc, fmt, kind = 'players',
   return `<div class="stats-record-detail"><p class="stats-record-detail-value">${fmt(value)}</p>${leaders.length ? leaders.map(p => button('stats-profile', `<span data-user-content>${esc(p.name)}</span>${chevron}`, 'native-card stats-detail-person', `data-kind="${kind === 'teams' ? 'teams' : 'players'}" data-name="${esc(p.name)}"`)).join('') : '<p>Рекордів ще немає. Внесіть результати партій у турнірі.</p>'}</div>`;
 }
 
-export function renderStatisticsProfile(db, { button, esc, fmt, kind = 'players', name }) {
+export function renderStatisticsProfile(db, { button, esc, fmt, kind = 'players', name, simpleMode=true }) {
   const data = collectStatistics(db), row = (kind === 'teams' ? data.teams : data.players).find(p => p.name === name);
   if (!row) return '<p>Учасника не знайдено.</p>';
-  return `<div class="stats-profile-detail"><div class="stats-overview">${[['played', kind === 'teams' ? 'Матчі' : 'Партії'], ['wins', 'Перемоги'], ['draws', 'Нічиї'], ['losses', 'Поразки']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(row[field])}</strong></div>`).join('')}</div><p>Перемоги у турнірах: <strong>${fmt(row.tournamentWins)}</strong></p>${kind !== 'teams' ? `<p>Найкращий приріст Elo: <strong>+${fmt(row.eloGain)}</strong></p>` : ''}<h3>Турніри</h3>${row.tournaments.map(t => button('open', `<span data-user-content>${esc(t.name)}</span><small>${t.winner ? 'Переможець · ' : ''}${fmt(t.wins)} перемог · ${fmt(t.draws)} нічиїх</small>${chevron}`, 'native-card stats-profile-tournament', `data-id="${esc(t.id)}"`)).join('')}</div>`;
+  return `<div class="stats-profile-detail"><div class="stats-overview">${[['played', kind === 'teams' ? 'Матчі' : 'Партії'], ['wins', 'Перемоги'], ['draws', 'Нічиї'], ['losses', 'Поразки']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(row[field])}</strong></div>`).join('')}</div><p>Перемоги у турнірах: <strong>${fmt(row.tournamentWins)}</strong></p>${!simpleMode&&kind !== 'teams' ? `<p>Найкращий приріст Elo: <strong>+${fmt(row.eloGain)}</strong></p>` : ''}<h3>Турніри</h3>${row.tournaments.map(t => button('open', `<span data-user-content>${esc(t.name)}</span><small>${t.winner ? 'Переможець · ' : ''}${fmt(t.wins)} перемог · ${fmt(t.draws)} нічиїх</small>${chevron}`, 'native-card stats-profile-tournament', `data-id="${esc(t.id)}"`)).join('')}</div>`;
 }

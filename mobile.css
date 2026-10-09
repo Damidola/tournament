@@ -404,3 +404,26 @@ dialog.player-dialog[open]{display:flex;flex-direction:column;height:min(640px,c
  .round-footer,.round-footer.sticky-action{padding:0 10px;margin-top:12px}
  .round-footer .btn{font-size:14px;min-height:44px}
 }
+
+[hidden]{display:none!important}
+:root[data-accent=purple]{--primary:#6d3ca0;--on-primary:#fff;--nav:#6d3ca0;--nav-active:#875db3;--nav-muted:#cab4de;--chip:#f0e3fa;--avatar:#eee3f5;--avatar-ink:#5b357b}
+:root[data-accent=blue]{--primary:#205f9d;--on-primary:#fff;--nav:#205f9d;--nav-active:#477cba;--nav-muted:#a4c7e8;--chip:#dfedfc;--avatar:#e0edfa;--avatar-ink:#29557b}
+:root[data-accent=teal]{--primary:#0e706e;--on-primary:#fff;--nav:#0e706e;--nav-active:#388f89;--nav-muted:#a5d7cb;--chip:#ddf1e9;--avatar:#ddf0eb;--avatar-ink:#235c56}
+:root[data-accent=rose]{--primary:#a53968;--on-primary:#fff;--nav:#a53968;--nav-active:#ba5b86;--nav-muted:#e9b7d1;--chip:#f9e2ed;--avatar:#f6e0eb;--avatar-ink:#803956}
+:root[data-theme=dark][data-accent=purple]{--primary:#bc92dd;--on-primary:#210a36;--nav:#603787;--nav-active:#7d55a1;--nav-muted:#c6b1dc;--chip:#382443;--avatar:#302338;--avatar-ink:#ddc8ec}
+:root[data-theme=dark][data-accent=blue]{--primary:#89b6e5;--on-primary:#092039;--nav:#245886;--nav-active:#457aab;--nav-muted:#b1cce9;--chip:#20364a;--avatar:#233446;--avatar-ink:#c9dfef}
+:root[data-theme=dark][data-accent=teal]{--primary:#7fc9bc;--on-primary:#042824;--nav:#23645e;--nav-active:#41897c;--nav-muted:#b0d8cb;--chip:#1b3933;--avatar:#20332e;--avatar-ink:#d0e7de}
+:root[data-theme=dark][data-accent=rose]{--primary:#df96b5;--on-primary:#350e22;--nav:#843351;--nav-active:#aa557b;--nav-muted:#edbfd6;--chip:#452536;--avatar:#38232e;--avatar-ink:#eccbdc}
+.accent-swatch{display:inline-block;width:30px;height:30px;flex-shrink:0;border-radius:50%;background:var(--primary)}
+.accent-swatch[data-color=green]{background:#31701f}.accent-swatch[data-color=purple]{background:#8c50b5}.accent-swatch[data-color=blue]{background:#397eca}.accent-swatch[data-color=teal]{background:#239487}.accent-swatch[data-color=rose]{background:#c25489}
+.accent-options{display:grid;gap:10px}.accent-options .btn{justify-content:flex-start;padding:10px 14px;min-height:52px}.accent-options .icon{margin-left:auto}
+.native-switch-display{display:inline-block;position:relative;flex-shrink:0;width:42px;height:26px;border-radius:20px;background:var(--line)}
+.native-switch-display:after{content:'';position:absolute;left:4px;top:4px;width:18px;height:18px;border-radius:50%;background:var(--surface)}
+.native-switch-display.checked{background:var(--primary)}.native-switch-display.checked:after{left:20px;background:var(--on-primary)}
+.config-extra summary{display:flex;align-items:center;justify-content:space-between;list-style:none;gap:10px;min-height:48px}
+.config-extra summary::-webkit-details-marker{display:none}.config-extra[open]>summary .icon{transform:rotate(90deg)}
+.config-extra>.profile-primary{padding-top:12px}.config-extra .config-duration{margin:0}.config-round-count small{font-size:12px;color:var(--muted)}
+.config-screen>.field,.config-screen form>.field{margin-bottom:14px}.native-name{margin-bottom:0}
+:root[data-simple=true] .directory-card-heading{margin-bottom:0}
+:root[data-simple=true] .directory-card{min-height:62px}
+:root[data-simple=true] .config-label{font-size:15px}

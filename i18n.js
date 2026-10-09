@@ -125,6 +125,28 @@ Object.assign(maps.en, {
  'Для пропусків і неявок внески обчислюються окремо за правилами обраної системи.':'Byes and forfeits are calculated separately under the selected system’s rules.',
  'Натисніть на гравця в таблиці, щоб побачити внесок кожного туру в коефіцієнти.':'Tap a player in the standings to see each round’s tiebreak contribution.'
 });
+Object.assign(maps.en, {
+ 'Акцентний колір':'Accent color', 'Зелений':'Green', 'Фіолетовий':'Purple', 'Синій':'Blue', 'Бірюзовий':'Teal', 'Рожевий':'Rose',
+ 'Спрощений режим':'Simple mode', 'Увімкнено · для дитячих турнірів':'On · for children’s tournaments', 'Вимкнено · рейтинги й аналіз':'Off · ratings and analysis',
+ 'Режим турніру':'Tournament mode', 'Порядок коефіцієнтів':'Tiebreak order', 'Змінити':'Change', 'Визначається кількістю гравців':'Determined by the number of players',
+ 'Попередній рейтинг після кожного туру; остаточний — після підтвердження.':'Provisional rating after each round; final rating after confirmation.',
+ 'Дані на цьому пристрої':'Data on this device', 'Працює без реєстрації':'Works without registration', 'Резервні копії':'Backups',
+ 'Збережіть турніри й профілі у хмару та відновлюйте на іншому пристрої за кодом доступу. Без входу в Google.':'Save tournaments and profiles to the cloud and restore them on another device with an access code. No Google sign-in needed.',
+ 'Посилання для батьків':'Link for parents', 'Постійне посилання':'Permanent link', 'Постійне посилання для батьків':'Permanent link for parents',
+ 'Батьки':'Parents', 'Опублікувати безкоштовно':'Publish for free', 'Скопіювати посилання':'Copy link', 'Оновити зараз':'Update now', 'Вимкнути публікацію':'Stop publishing',
+ 'Жеребківка поточного й попередніх турів та таблиця місць. Без входу, рейтингів і контактних даних. Посилання залишається тим самим.':'Current and previous round pairings and standings. No sign-in, ratings or contact information. The link stays the same.',
+ 'Очікує з’єднання':'Waiting for connection', 'Опубліковано · автоматичне оновлення':'Published · automatic updates', 'Очікує публікації':'Waiting to publish', 'Публікую жеребківку…':'Publishing pairings…',
+ 'Зміни збережено на пристрої. Публічна сторінка оновиться після відновлення зв’язку.':'Changes saved on this device. The public page will update when the connection returns.',
+ 'Публічну сторінку оновлено.':'Public page updated.', 'Хмарна резервна копія':'Cloud backup',
+ 'Без входу в Google. Збережіть код доступу: з ним можна відновити турніри й профілі на іншому пристрої.':'No Google sign-in needed. Keep your access code to restore tournaments and profiles on another device.',
+ 'Ваш код доступу':'Your access code', 'Код резервної копії':'Backup code', 'Скопіювати код':'Copy code', 'Зберегти копію в хмару':'Save backup to cloud', 'Відновити за кодом':'Restore with code',
+ 'Хмарну копію збережено.':'Cloud backup saved.', 'Код резервної копії скопійовано.':'Backup code copied.', 'Відновити хмарну копію':'Restore cloud backup', 'Знайти копію':'Find backup', 'Відновити цю копію?':'Restore this backup?',
+ 'Поточні дані буде замінено; перед цим збережеться файл поточної копії.':'Current data will be replaced after downloading a copy of the existing data.', 'Хмарну копію відновлено.':'Cloud backup restored.',
+ 'Змінити склад гравців':'Change player roster', 'Спочатку завершіть поточний тур.':'Finish the current round first.', 'Тур завершено. Можна змінити склад або створити наступний тур.':'Round completed. You can change the roster or create the next round.',
+ 'Склад можна змінювати між турами; коефіцієнти — у таблиці місць.':'The roster can be changed between rounds; tiebreaks can be changed in the standings.',
+ 'Підтвердити остаточні рейтинги':'Confirm final ratings', 'Попередні рейтинги перераховуються після кожного закритого туру. Збережіть остаточні значення у профілі гравців.':'Provisional ratings are recalculated after each completed round. Save the final values to player profiles.',
+ 'Зберегти в профілі':'Save to profiles', 'Остаточні рейтинги збережено у профілях.':'Final ratings saved to profiles.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
