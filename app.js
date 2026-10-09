@@ -3,17 +3,17 @@ import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStora
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderInfo, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.2.0';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.2.1';
 
 const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const root = document.querySelector('#app'), modal = document.querySelector('#modal');
 const button = (a, text, style = '', extra = '') => `<button type="button" class="btn ${style}" data-action="${a}" ${extra}>${text}</button>`;
-const labelSystem = t => ({roundrobin:'Коловий турнір',knockout:'На вибування',swissDutch:'Швейцарська система (нідерландська)',teamSwiss:'Командна швейцарська система',swiss:'Гнучка швейцарська система',arena:'Арена'}[t.system] || SYSTEMS[t.system]?.label || 'Швейцарська система');
+const labelSystem = t => ({roundrobin:'Коловий турнір',knockout:'На вибування',swissDutch:'Швейцарська система',teamSwiss:'Командна швейцарська система',swiss:'Гнучка швейцарська система',arena:'Арена'}[t.system] || SYSTEMS[t.system]?.label || 'Швейцарська система');
 const date = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleDateString(language==='en'?'en-GB':'uk-UA', { day:'numeric', month:'short' });
 const stamp = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleString(language==='en'?'en-GB':'uk-UA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-let db, fatal = '', filter = 'all', wizard = { mode:'simple', system:'swiss' }, tieOrder = [], toastTimer, recoveryPending, trfPending;
+let db, fatal = '', filter = 'all', wizard = { mode:'simple', system:'swissDutch' }, tieOrder = [], toastTimer, recoveryPending, trfPending;
 function translateValue(value) { return translate(value,language); }
 function localizeDOM() {
   for (const container of [root, modal]) {
@@ -43,7 +43,7 @@ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(them
 applyTheme();
 function route() {
   const parts = location.hash.slice(1).split('/').filter(Boolean);
-  const page = parts[0] || 'home';
+  const page = parts[0] === 'info' ? 'account' : parts[0] || 'home';
   if (page === 'tour') { currentId = parts[1]; tab = ['rounds','ranking','players','history','config'].includes(parts[2]) ? parts[2] : 'rounds'; viewRound = Number(parts[3]) || db.tournaments.find(t=>t.id===currentId)?.rounds.length || 0; }
   return page;
 }
@@ -66,7 +66,8 @@ function change(label, action) {
   const position=window.scrollY;save(next);render();window.scrollTo({top:position,behavior:'instant'});
 }
 function create(t) { const next = clone(db); next.tournaments.unshift(validateTournament(t)); save(next); currentId = t.id; navigate(`tour/${t.id}/${t.rounds.length ? 'rounds' : 'players'}`); }
-function dialog(title, body, userTitle=false) {
+function dialog(title, body, userTitle=false, fixedActions=false) {
+  modal.classList.toggle('player-dialog',fixedActions);
   modal.innerHTML = `<div class="modal-head"><h2 id="modal-title" ${userTitle?'data-user-content':''}>${esc(title)}</h2><button class="icon-btn" type="button" data-action="dismiss" aria-label="Закрыть">${icon('close')}</button></div><div class="modal-body">${body}</div>`;
   if (!modal.open) modal.showModal();
   localizeDOM();
@@ -80,12 +81,12 @@ function download(name, content, type = 'application/json') {
 }
 function nav(){
   const page=route(),selected=page==='directory'?'players':page==='backup'?'account':page;
-  const items=[['home','cup','Турніри'],['players','people','Гравці та команди'],['statistics','chart','Статистика'],['account','account','Обліковий запис'],['info','info','Інформація']];
+  const items=[['home','cup','Турніри'],['players','people','Гравці та команди'],['statistics','chart','Статистика'],['account','account','Обліковий запис']];
   return {selected,items};
 }
 function layout(content){
-  const page=route(),{selected,items}=nav(),t=current(),primary=['home','directory','statistics','account','info'].includes(page);
-  const titles={home:'Менеджер шахових турнірів',directory:'Гравці та команди',statistics:'Статистика',account:'Обліковий запис',info:'Інформація',backup:'Резервні копії'},category={standard:'Класика',rapid:'Рапід',blitz:'Бліц'};
+  const page=route(),{selected,items}=nav(),t=current(),primary=['home','directory','statistics','account'].includes(page);
+  const titles={home:'Менеджер шахових турнірів',directory:'Гравці та команди',statistics:'Статистика',account:'Обліковий запис',backup:'Резервні копії'},category={standard:'Класика',rapid:'Рапід',blitz:'Бліц'};
   const tourTitle=t?(tab==='ranking'?'Турнірна таблиця':tab==='players'?'Керування гравцями':tab==='history'?'Історія змін':labelSystem(t)):'Турнір';
   const title=page==='tour'?tourTitle:page==='new'?(wizard.step==='config'?labelSystem({system:wizard.system}):'Формат'):titles[page]||titles.home;
   const item=([a,i,text])=>`<button class="nav-item ${selected===a?'selected':''}" data-action="nav" data-target="${a}">${icon(i)}<span>${text}</span></button>`;
@@ -103,17 +104,18 @@ function directoryPage(){
 }
 function directoryPlayerDialog(id=''){
  const p=loadDirectory().find(p=>p.id===id)||{};
- const rating=(name,title,key)=>`<div class="profile-ratings"><label class="field">${title}<input name="${name}" type="number" inputmode="numeric" min="0" max="3500" value="${p[key]||0}"></label><label class="field">K<select name="${name}K">${[10,20,40].map(k=>`<option ${(p[name+'K']||20)===k?'selected':''}>${k}</option>`).join('')}</select></label></div>`;
- dialog(id?'Редагувати профіль':'Новий гравець',`<form id="directory-player-form"><input type="hidden" name="id" value="${esc(id)}"><div class="profile-primary"><label class="field">Ім’я та прізвище<input name="name" maxlength="80" value="${esc(p.name||'')}" autocomplete="name" required></label>${rating('standard','Класика','rating')}${rating('rapid','Рапід','rapidElo')}${rating('blitz','Бліц','blitzElo')}</div><details class="profile-extra"><summary>Інші дані гравця</summary><div class="form-grid"><label class="field">Титул FIDE<select name="title"><option value="">—</option>${['GM','IM','WGM','FM','WIM','CM','WFM','WCM'].map(title=>`<option ${p.title===title?'selected':''}>${title}</option>`).join('')}</select></label><label class="field">Федерація<input name="federation" maxlength="3" value="${esc(p.federation||'')}"></label><label class="field">Дата народження<input name="birthDate" type="date" value="${esc(p.birthDate||'')}"></label><label class="field">Стать<select name="gender">${[['','Не вказано'],['male','Чоловіча'],['female','Жіноча']].map(([v,n])=>`<option value="${v}" ${p.gender===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="field full">Телефон<input name="phone" type="tel" value="${esc(p.phone||'')}"></label><label class="field full">Адреса<input name="address" value="${esc(p.address||'')}"></label></div></details><div class="modal-actions">${button('dismiss','Скасувати')}<button class="btn primary" type="submit">Зберегти</button></div></form>`);
+ const kField=name=>`<label class="field">${name==='standard'?'Коефіцієнт K FIDE':'K'}<select name="${name}K">${[10,20,40].map(k=>`<option ${(p[name+'K']||20)===k?'selected':''}>${k}</option>`).join('')}</select></label>`;
+ const rating=(name,title,key)=>`<div class="profile-ratings"><label class="field">${title}<input name="${name}" type="number" inputmode="numeric" min="0" max="3500" value="${p[key]||''}"></label>${kField(name)}</div>`;
+ dialog(id?'Редагувати профіль':'Додати гравця',`<form id="directory-player-form" class="player-form"><input type="hidden" name="id" value="${esc(id)}"><div class="player-fields"><div class="profile-primary"><label class="field">Ім’я та прізвище<input name="name" maxlength="80" value="${esc(p.name||'')}" autocomplete="name" required></label><label class="field">Рейтинг Elo<input name="standard" type="number" inputmode="numeric" min="0" max="3500" value="${p.rating||''}" placeholder="Необов’язково"></label></div><details class="profile-extra"><summary>Додаткові налаштування${icon('arrow')}</summary><div class="profile-primary">${kField('standard')}${rating('rapid','Рапід','rapidElo')}${rating('blitz','Бліц','blitzElo')}<div class="form-grid"><label class="field">Титул FIDE<select name="title"><option value="">—</option>${['GM','IM','WGM','FM','WIM','CM','WFM','WCM'].map(title=>`<option ${p.title===title?'selected':''}>${title}</option>`).join('')}</select></label><label class="field">Федерація<input name="federation" maxlength="3" value="${esc(p.federation||'')}"></label><label class="field">Дата народження<input name="birthDate" type="date" value="${esc(p.birthDate||'')}"></label><label class="field">Стать<select name="gender">${[['','Не вказано'],['male','Чоловіча'],['female','Жіноча']].map(([v,n])=>`<option value="${v}" ${p.gender===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="field full">Телефон<input name="phone" type="tel" value="${esc(p.phone||'')}"></label><label class="field full">Адреса<input name="address" value="${esc(p.address||'')}"></label></div></div></details></div><div class="modal-actions player-actions"><button class="btn primary" type="submit">${id?'Зберегти':'Додати'}</button></div></form>`,false,true);
 }
 function directoryGroupDialog(kind,id='') {
   const items=kind==='teams'?db.savedTeams:db.playerLists,group=items.find(x=>x.id===id)||{players:[]};
   dialog(kind==='teams'?'Збережена команда':'Список гравців',`<form id="directory-group-form" class="stack"><input type="hidden" name="id" value="${esc(id)}"><input type="hidden" name="kind" value="${kind}"><label class="field">${kind==='teams'?'Назва команди':'Назва списку'}<input name="name" value="${esc(group.name||'')}" maxlength="100" required></label><p class="small">Порядок вибраних гравців — порядок дошок у команді.</p>${loadDirectory().map(p=>`<label class="tie-row"><input type="checkbox" name="selected" value="${esc(p.id)}" ${group.players.includes(p.id)?'checked':''}><span data-user-content>${esc(p.name)}</span></label>`).join('')}<div class="modal-actions">${id?button('delete-directory-group','Видалити','danger','data-id="'+esc(id)+'" data-kind="'+kind+'"'):button('dismiss','Скасувати')}<button class="btn primary" type="submit">Зберегти</button></div></form>`);
 }
 function newPage(){
- const formats=[['roundrobin','RR','Коловий турнір','Повний фіксований розклад з Elo та експортом PDF.',3],['knockout','KO','На вибування','Сітка на вибування з ручним вибором переможця тай-брейку.',2],['swissDutch','DS','Швейцарська система (нідерландська)','Нідерландська система жеребкування з урахуванням правил FIDE, рекомендована для змагальних турнірів.',4],['teamSwiss','TS','Командна швейцарська система','Командні матчі за швейцарською системою.',2],['swiss','FS','Гнучка швейцарська система','Гнучкі пари для клубних турнірів.',4],['arena','AR','Арена','Динамічні пари та необмежена кількість турів.',3]];
+ const formats=[['swissDutch','SS','Швейцарська система','Пари за очками, без повторних суперників.',4],['roundrobin','RR','Коловий турнір','Кожен гравець зустрічається з усіма іншими.',3],['knockout','KO','На вибування','Сітка на вибування з ручним вибором переможця тай-брейку.',2],['teamSwiss','TS','Командна швейцарська система','Командні матчі за швейцарською системою.',2],['swiss','FS','Гнучка швейцарська система','Гнучкі пари для клубних турнірів.',4],['arena','AR','Арена','Динамічні пари та необмежена кількість турів.',3]];
  if(wizard.step==='config')return nativeConfig();
- return `<section class="format-screen"><p class="screen-description">Виберіть спосіб створення пар. Далі можна налаштувати гравців і кількість турів.</p><div class="format-list">${formats.map(([system,code,name,description,min],i)=>`<button data-action="format-choice" data-system="${system}" aria-pressed="${Boolean(wizard.chosen&&wizard.system===system)}" class="format-card ${wizard.chosen&&wizard.system===system?'selected':''}"><span class="format-code">${code}</span><span class="format-copy"><strong>${name}</strong><p>${description}</p><span class="badge format-badge">${icon('people')} Мін. ${min} ${system==='teamSwiss'?'команди':'гравці'}</span></span><span class="format-side"><span class="format-access ${i>1?'premium':''}">${i>1?'Розширений':'Безкоштовно'}</span>${icon('info')}${icon('arrow')}</span></button>`).join('')}</div><div class="sticky-action">${button('format-next','Продовжити','primary',wizard.chosen?'':'disabled')}</div></section>`;
+ return `<section class="format-screen"><p class="screen-description">Виберіть спосіб створення пар. Далі можна налаштувати гравців і кількість турів.</p><div class="format-list">${formats.map(([system,code,name,description,min])=>`<button data-action="format-choice" data-system="${system}" aria-pressed="${Boolean(wizard.chosen&&wizard.system===system)}" class="format-card ${wizard.chosen&&wizard.system===system?'selected':''}"><span class="format-code">${code}</span><span class="format-copy"><strong>${name}</strong><p>${description}</p><span class="badge format-badge">${icon('people')} Мін. ${min} ${system==='teamSwiss'?'команди':'гравці'}</span></span><span class="format-side">${icon('arrow')}</span></button>`).join('')}</div><div class="sticky-action">${button('format-next','Продовжити','primary',wizard.chosen?'':'disabled')}</div></section>`;
 }
 function segmented(name,value,options){
  return `<div class="native-segmented"><input type="hidden" name="${name}" value="${esc(value)}">${options.map(([v,n])=>`<button type="button" class="${value===v?'selected':''}" data-action="config-set" data-name="${name}" data-value="${v}" aria-pressed="${value===v}">${n}</button>`).join('')}</div>`;
@@ -181,8 +183,8 @@ function pairingsDialog(t) {
 }
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme};
- const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='info'?renderInfo(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
- root.dataset.build='3.2.0';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+ const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
+ root.dataset.build='3.2.1';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -261,7 +263,7 @@ async function act(a,d) {
   if(a==='delete-directory-group'){const next=clone(db),key=d.kind==='teams'?'savedTeams':'playerLists';next[key]=next[key].filter(x=>x.id!==d.id);save(next);modal.close();render();return}
   if(a==='save-roster'){const next=clone(db),list=[];for(const p of t.players){let found=next.localPlayers.find(x=>x.name.trim().toLowerCase()===p.name.trim().toLowerCase());if(!found){found={id:uid(),name:p.name,rating:p.initialRating??p.rating??0,title:p.title||'',federation:p.federation||''};next.localPlayers.push(found)}list.push(found.id);}next.playerLists.push({id:uid(),name:t.name,players:list});save(next);showToast('Склад збережено в каталозі.');return}
   if(a==='participant-menu'){const p=t.players.find(p=>p.id===d.id),row=statistics(t).find(p=>p.id===d.id),eligible=!p.removedRound&&!row?.byes&&!row?.entries.some(e=>e.kind==='forfeit'&&e.score===1);dialog(p.name,`<div class="stack">${button('profile','Статистика гравця','','data-id="'+esc(p.id)+'"')}${t.status==='active'&&(isSwissSystem(t.system)||isArenaSystem(t.system))?button('withdraw-player',p.removedRound?'Повернути учасника':'Зняти з турніру','','data-id="'+esc(p.id)+'"')+(eligible||t.requestedByes?.includes(p.id)?button('request-bye',t.requestedByes?.includes(p.id)?'Скасувати пропуск':'Запит на пропуск','','data-id="'+esc(p.id)+'"'):''):''}</div>`,true);return}
-  if(a==='edit-tournament-player'){const p=t.players.find(p=>p.id===d.id);dialog('Профіль гравця',`<form id="tournament-player-form" class="stack"><input type="hidden" name="id" value="${esc(p.id)}"><label class="field">Ім’я та прізвище<input name="name" maxlength="80" value="${esc(p.name)}" required></label>${t.mode==='advanced'?`<label class="field">Elo<input name="rating" type="number" min="0" max="3500" value="${p.rating||0}"></label><label class="field">K<select name="fideKFactor">${[10,20,40].map(k=>`<option ${p.fideKFactor===k?'selected':''}>${k}</option>`).join('')}</select></label><label class="field">Титул FIDE<input name="title" value="${esc(p.title||'')}" maxlength="8"></label>`:''}<div class="modal-actions">${button('remove-player','Видалити','danger','data-id="'+esc(p.id)+'"')}<button class="btn primary" type="submit">Зберегти</button></div></form>`);return}
+  if(a==='edit-tournament-player'){const p=t.players.find(p=>p.id===d.id);dialog('Профіль гравця',`<form id="tournament-player-form" class="player-form"><input type="hidden" name="id" value="${esc(p.id)}"><div class="player-fields"><div class="profile-primary"><label class="field">Ім’я та прізвище<input name="name" maxlength="80" value="${esc(p.name)}" required></label>${t.mode==='advanced'?`<label class="field">Рейтинг Elo<input name="rating" type="number" inputmode="numeric" min="0" max="3500" value="${p.rating||''}"></label>`:''}</div>${t.mode==='advanced'?`<details class="profile-extra"><summary>Додаткові налаштування${icon('arrow')}</summary><div class="profile-primary"><label class="field">Коефіцієнт K FIDE<select name="fideKFactor">${[10,20,40].map(k=>`<option ${(p.fideKFactor||20)===k?'selected':''}>${k}</option>`).join('')}</select></label><label class="field">Титул FIDE<input name="title" value="${esc(p.title||'')}" maxlength="8"></label></div></details>`:''}</div><div class="modal-actions player-actions">${button('remove-player','Видалити','danger','data-id="'+esc(p.id)+'"')}<button class="btn primary" type="submit">Зберегти</button></div></form>`,false,true);return}
   if(a==='format-choice'){wizard.system=d.system;wizard.chosen=true;render();return}
   if(a==='format-next'){wizard.step='config';render();window.scrollTo(0,0);return}
   if(a==='format-back'){wizard.step='format';render();return}
@@ -272,7 +274,7 @@ async function act(a,d) {
   if(a==='request-bye'){change('Запит на пропуск туру',x=>requestBye(x,d.id));modal.close();showToast('Зміни застосуються перед наступним туром.');return}
   if(a==='withdraw-player'){change('Зміна участі у наступному турі',x=>withdrawPlayer(x,d.id));modal.close();showToast('Зміни застосуються перед наступним туром.');return}
   if(a==='home'){navigate('home');return}
-  if(a==='new'){wizard={mode:'simple',system:'swiss',step:'format',chosen:false};navigate('new');return}
+  if(a==='new'){wizard={mode:'simple',system:'swissDutch',step:'format',chosen:false};navigate('new');return}
   if(a==='nav'){modal.close();navigate(d.target==='players'?'directory':d.target==='backup'?'account':d.target);return}
   if(a==='open'||a==='open-history'){currentId=d.id;rankingThrough=null;navigate(`tour/${d.id}/${a==='open-history'?'history':db.tournaments.find(t=>t.id===d.id)?.status==='draft'?'config':'rounds'}`);return}
   if(a==='tab'){rankingThrough=null;navigate(`tour/${t.id}/${d.target}`);return}
@@ -404,7 +406,7 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',render);window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.2.0')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.2.1')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();

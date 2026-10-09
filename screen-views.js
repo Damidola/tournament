@@ -21,6 +21,7 @@ export function renderAccount({ button, esc, theme = 'light' }) {
       ${button('cloud-backup', solidIcon('account') + '<span class="cloud-button-label">Увійдіть, щоб використовувати хмарну копію</span>', 'primary account-backup-button')}
     </section>
     ${button('theme-choose', `<span class="account-setting-icon">${solidIcon('sun')}</span><span class="account-setting-text"><strong>Тема</strong><span>${esc(themes[theme] || themes.light)}</span></span>${chevron}`, 'native-card theme-card')}
+    <details class="native-card account-information"><summary>Інформація${chevron}</summary>${renderInfo({button})}</details>
   </section>`;
 }
 

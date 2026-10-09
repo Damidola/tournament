@@ -104,6 +104,12 @@ Object.assign(maps.en, {
   'Google-вхід поки недоступний. Турніри та результати зберігаються на цьому пристрої.':'Google sign-in is currently unavailable. Tournaments and results are saved on this device.',
   'Зберігайте турніри, гравців і дані застосунку в підключеному хмарному обліковому записі, щоб відновити їх на іншому пристрої.':'Save tournaments, players and app data to your connected cloud account to restore them on another device.'
 });
+Object.assign(maps.en, {
+ 'Рейтинг Elo':'Elo rating', 'Коефіцієнт K FIDE':'FIDE K factor',
+ 'Додаткові налаштування':'Additional settings', 'Необов’язково':'Optional',
+ 'Пари за очками, без повторних суперників.':'Pairings by score, without repeat opponents.',
+ 'Кожен гравець зустрічається з усіма іншими.':'Every player faces every other player.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
