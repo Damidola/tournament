@@ -3,27 +3,21 @@ import { RESULTS, statistics, teamStatistics, isTeamSystem } from './engine.js';
 // The app uses the same Material icon glyphs as the Android reference.
 const materialNames = {
   account: 'account_circle', cloud: 'cloud_upload', sun: 'light_mode',
-  shield: 'privacy_tip', star: 'star', share: 'share', bars: 'bar_chart', globe: 'language'
+  shield: 'privacy_tip', star: 'star', share: 'share', bars: 'bar_chart', globe: 'language', fullscreen:'fullscreen'
 };
 const solidIcon = name => `<span class="icon material-icon native-solid-icon" aria-hidden="true">${materialNames[name] || materialNames.bars}</span>`;
 const chevron = '<span class="icon material-icon native-chevron" aria-hidden="true">chevron_right</span>';
 
-export function renderAccount({ button, esc, theme = 'light', simpleMode=true, accent='green', accentNames={} }) {
+export function renderAccount({ button, esc, theme = 'light', language='uk', simpleMode=true, accent='teal', accentNames={} }) {
   const themes = { light: 'Світла тема', dark: 'Темна тема', system: 'Як на пристрої' };
+  const row=(action,symbol,title,value='')=>button(action,`<span class="account-setting-icon">${solidIcon(symbol)}</span><span class="account-setting-text"><strong>${title}</strong>${value?`<span>${esc(value)}</span>`:''}</span>${chevron}`,'native-card theme-card');
   return `<section class="account-screen native-screen">
-    <section class="native-card account-card">
-      <div class="account-card-heading"><span class="account-avatar">${solidIcon('account')}</span><div><h2>Обліковий запис</h2><p>Дані на цьому пристрої</p></div><span class="account-status-icon">${solidIcon('account')}</span></div>
-      <p class="account-local-note">Працює без реєстрації</p>
-    </section>
-    <section class="native-card cloud-card">
-      <h2>${solidIcon('cloud')}<span>Хмарна резервна копія</span></h2>
-      <p>Збережіть турніри й профілі у хмару та відновлюйте на іншому пристрої за кодом доступу. Без входу в Google.</p>
-      ${button('cloud-backup', solidIcon('cloud') + '<span class="cloud-button-label">Резервні копії</span>', 'primary account-backup-button')}
-    </section>
-    ${button('theme-choose', `<span class="account-setting-icon">${solidIcon('sun')}</span><span class="account-setting-text"><strong>Тема</strong><span>${esc(themes[theme] || themes.light)}</span></span>${chevron}`, 'native-card theme-card')}
-    ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.green}</span></span>${chevron}`,'native-card theme-card')}
-    ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Спрощений режим</strong><span>${simpleMode?'Увімкнено · для дитячих турнірів':'Вимкнено · рейтинги й аналіз'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
-    <details class="native-card account-information"><summary>Інформація${chevron}</summary>${renderInfo({button})}</details>
+    ${row('language-menu','globe','Мова',language==='en'?'English':'Українська')}
+    ${row('theme-choose','sun','Тема',themes[theme]||themes.system)}
+    ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.teal}</span></span>${chevron}`,'native-card theme-card')}
+    ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Дитячий режим</strong><span>${simpleMode?'Увімкнено':'Вимкнено'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
+    ${row('cloud-backup','cloud','Резервні копії')}
+    ${row('fullscreen-toggle','fullscreen',document.fullscreenElement?'Вийти з повного екрана':'Повний екран')}
   </section>`;
 }
 

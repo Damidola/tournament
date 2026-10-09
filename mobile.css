@@ -430,3 +430,9 @@ dialog.player-dialog[open]{display:flex;flex-direction:column;height:min(640px,c
 
 .native-primary-bar .header-spacer{width:12px;flex-basis:12px}
 button:not(.icon-btn):not(.nav-item),summary{overflow-wrap:anywhere}
+
+.action-menu{position:fixed;z-index:45;width:max-content;max-width:calc(100vw - 16px);padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px #0004}
+.action-menu .btn{display:flex;justify-content:flex-start;width:100%;min-height:48px;border:0;border-radius:4px;background:transparent;padding:10px 12px;color:var(--ink);font-size:15px}
+.action-menu .btn .icon{color:var(--primary);margin-right:6px}.action-menu .btn.danger,.action-menu .btn.danger .icon{color:var(--red)}
+.action-menu .btn:hover,.action-menu .btn:focus-visible{background:var(--soft)}
+.account-screen{gap:10px}.account-setting-text strong{font-size:16px}.account-setting-text>span{font-size:13px}.theme-card{padding:12px 14px;border-radius:18px!important}

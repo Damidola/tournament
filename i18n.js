@@ -147,6 +147,12 @@ Object.assign(maps.en, {
  'Підтвердити остаточні рейтинги':'Confirm final ratings', 'Попередні рейтинги перераховуються після кожного закритого туру. Збережіть остаточні значення у профілі гравців.':'Provisional ratings are recalculated after each completed round. Save the final values to player profiles.',
  'Зберегти в профілі':'Save to profiles', 'Остаточні рейтинги збережено у профілях.':'Final ratings saved to profiles.'
 });
+Object.assign(maps.en, {
+ 'Налаштування':'Settings','Дитячий режим':'Children’s mode','Редагувати гравця':'Edit player','Видалити':'Delete',
+ 'Повний екран':'Full screen','Вийти з повного екрана':'Exit full screen',
+ 'Цей браузер не підтримує повний екран. Додайте сайт на головний екран.':'This browser does not support full screen. Add the site to your home screen.',
+ 'Браузер не дозволив увімкнути повний екран.':'The browser did not allow full screen.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";

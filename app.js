@@ -1,13 +1,13 @@
-import {confirmFinalRatings,reconcileFinalRatings} from './ratings-sync.js?v=3.4.1';
-import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.1';
+import {confirmFinalRatings,reconcileFinalRatings} from './ratings-sync.js?v=3.4.2';
+import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.2';
 import { RESULTS, TIEBREAKS, SYSTEMS, uid, fmt, clone, createTournament, statistics, teamStatistics, roundCount, addRound, closeRound, rollback, requestBye, withdrawPlayer, setResult, setBoardResult, setKnockoutWinner, validateTournament, isSwissSystem, isTeamSystem, isKnockoutSystem, isArenaSystem } from './engine.js';
 import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.1';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.2';
 
-const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
+const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',edit:'edit',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const root = document.querySelector('#app'), modal = document.querySelector('#modal');
@@ -36,7 +36,7 @@ if(!fatal&&!db.localPlayers.length){try{const legacy=JSON.parse(stored(directory
 let currentId = null, tab = 'rounds', viewRound = 0, rankingThrough = null;
 let directorySection='players',directorySearch='',directorySort='name',statisticsKind='players';
 let theme=stored('tournament-theme')||'system';
-let simplified=stored('tournament-ui-mode')!=='advanced',accent=stored('tournament-accent')||'green';
+let simplified=stored('tournament-ui-mode')!=='advanced',accent=stored('tournament-accent')||'teal';
 const accentNames={green:'Зелений',purple:'Фіолетовий',blue:'Синій',teal:'Бірюзовий',rose:'Рожевий'};
 const showRatings=t=>!simplified&&t.mode!=='simple';
 function automaticName(){return `${language==='uk'?'Турнір':'Tournament'} ${db.tournaments.length+1} · ${new Date().toLocaleString(language==='uk'?'uk-UA':'en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;}
@@ -44,7 +44,7 @@ function automaticName(){return `${language==='uk'?'Турнір':'Tournament'} 
 function applyTheme(){
  const dark=theme==='dark'||theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches;
  document.documentElement.dataset.theme=dark?'dark':'light';
- document.documentElement.dataset.accent=Object.hasOwn(accentNames,accent)?accent:'green';
+ document.documentElement.dataset.accent=Object.hasOwn(accentNames,accent)?accent:'teal';
  document.documentElement.dataset.simple=String(simplified);
  document.querySelector('meta[name=theme-color]').content=getComputedStyle(document.documentElement).getPropertyValue('--nav').trim()||'#31701f';
 }
@@ -99,16 +99,22 @@ function download(name, content, type = 'application/json') {
 }
 function nav(){
   const page=route(),selected=page==='directory'?'players':page==='backup'?'account':page;
-  const items=[['home','cup','Турніри'],['players','people','Гравці та команди'],['statistics','chart','Статистика'],['account','account','Обліковий запис']];
+  const items=[['home','cup','Турніри'],['players','people','Гравці та команди'],['statistics','chart','Статистика'],['account','settings','Налаштування']];
   return {selected,items};
 }
 function layout(content){
   const page=route(),{selected,items}=nav(),t=current(),primary=['home','directory','statistics','account'].includes(page);
-  const titles={home:'Менеджер шахових турнірів',directory:'Гравці та команди',statistics:'Статистика',account:'Обліковий запис',backup:'Резервні копії'},category={standard:'Класика',rapid:'Рапід',blitz:'Бліц'};
+  const titles={home:'Менеджер шахових турнірів',directory:'Гравці та команди',statistics:'Статистика',account:'Налаштування',backup:'Резервні копії'},category={standard:'Класика',rapid:'Рапід',blitz:'Бліц'};
   const tourTitle=t?(tab==='ranking'?'Турнірна таблиця':tab==='players'?'Керування гравцями':tab==='history'?'Історія змін':simplified?t.name:labelSystem(t)):'Турнір';
   const title=page==='tour'?tourTitle:page==='new'?(wizard.step==='config'?labelSystem({system:wizard.system}):'Формат'):titles[page]||titles.home;
   const item=([a,i,text])=>`<button class="nav-item ${selected===a?'selected':''}" data-action="nav" data-target="${a}">${icon(i)}<span>${text}</span></button>`;
-  return `<aside class="sidebar"><button class="logo" data-action="home">Менеджер турнірів</button><nav>${items.map(item).join('')}</nav></aside><main class="main ${primary?'primary-screen':'secondary-screen'}"><header class="topbar ${primary?'native-primary-bar':'native-secondary-bar'}">${primary?'<span class="header-spacer"></span>':button('screen-back',icon('back'),'icon-btn','aria-label="Назад"')}<div class="app-title"><h1>${esc(title)}</h1>${page==='tour'&&t&&tab==='rounds'&&showRatings(t)?`<p>${category[t.ratingCategory]||category.standard}</p>`:''}</div>${page==='tour'&&t?button('tour-menu',icon('more'),'icon-btn','aria-label="Дії з турніром"'):page==='account'?button('language-menu',icon('language'),'icon-btn','aria-label="Мова"'):'<span class="header-spacer"></span>'}</header>${fatal?`<div class="feedback-error">${esc(fatal)} ${button('raw-backup','Завантажити вихідні дані')}</div>`:''}${content}</main>${primary?`<nav class="mobile-nav" aria-label="Навігація">${items.map(([a,i,text])=>`<button data-action="nav" data-target="${a}" aria-label="${text}" class="${selected===a?'selected':''}"><span class="nav-icon">${icon(i)}</span></button>`).join('')}</nav>`:''}<input id="import-file" type="file" accept=".json,application/json" hidden>`;
+  return `<aside class="sidebar"><button class="logo" data-action="home">Менеджер турнірів</button><nav>${items.map(item).join('')}</nav></aside><main class="main ${primary?'primary-screen':'secondary-screen'}"><header class="topbar ${primary?'native-primary-bar':'native-secondary-bar'}">${primary?'<span class="header-spacer"></span>':button('screen-back',icon('back'),'icon-btn','aria-label="Назад"')}<div class="app-title"><h1>${esc(title)}</h1>${page==='tour'&&t&&tab==='rounds'&&showRatings(t)?`<p>${category[t.ratingCategory]||category.standard}</p>`:''}</div>${page==='tour'&&t?button('tour-menu',icon('more'),'icon-btn','aria-label="Дії з турніром"'):'<span class="header-spacer"></span>'}</header>${fatal?`<div class="feedback-error">${esc(fatal)} ${button('raw-backup','Завантажити вихідні дані')}</div>`:''}${content}</main>${primary?`<nav class="mobile-nav" aria-label="Навігація">${items.map(([a,i,text])=>`<button data-action="nav" data-target="${a}" aria-label="${text}" class="${selected===a?'selected':''}"><span class="nav-icon">${icon(i)}</span></button>`).join('')}</nav>`:''}<input id="import-file" type="file" accept=".json,application/json" hidden>`;
+}
+function closeActionMenu(){document.querySelector('.action-menu')?.remove();}
+function openActionMenu(id){
+ closeActionMenu();const anchor=[...root.querySelectorAll('[data-action="directory-player-menu"]')].find(e=>e.dataset.id===id);if(!anchor)return;
+ const menu=document.createElement('div');menu.className='action-menu';menu.setAttribute('role','menu');menu.innerHTML=button('edit-directory-player',icon('edit')+' Редагувати гравця','','data-id="'+esc(id)+'" role="menuitem"')+button('delete-directory-player',icon('trash')+' Видалити','danger','data-id="'+esc(id)+'" role="menuitem"');root.append(menu);localizeDOM();
+ const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-m.width-8,r.right-m.width))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-m.height-8,r.bottom+4))+'px';menu.querySelector('button').focus();
 }
 function home(){
  const archived=filter==='archived',tournaments=db.tournaments.filter(t=>Boolean(t.archived)===archived);
@@ -218,7 +224,7 @@ function pairingsDialog(t) {
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme,simpleMode:simplified,accent,accentNames};
  const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
- root.dataset.build='3.4.1';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+ root.dataset.build='3.4.2';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -287,12 +293,17 @@ async function act(a,d) {
  if(a==='cloud-restore'){dialog('Відновити хмарну копію',`<form id="cloud-restore-form" class="stack"><label class="field">Код резервної копії<textarea name="code" rows="3" required spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></label><button class="btn primary" type="submit">Знайти копію</button></form>`);return}
  if(a==='cloud-restore-confirm'){if(!cloudPending)throw new Error('Спочатку знайдіть резервну копію.');if(db.tournaments.length||db.localPlayers.length)download('tournament-before-restore.json',JSON.stringify(db,null,2));save(cloudPending);cloudPending=null;modal.close();navigate('home');showToast('Хмарну копію відновлено.');return}
  if(a==='accent-choose'){dialog('Акцентний колір',`<div class="accent-options">${Object.entries(accentNames).map(([key,name])=>button('accent-set',`<span class="accent-swatch" data-color="${key}"></span>${name}${accent===key?icon('check'):''}`,'','data-value="'+key+'"')).join('')}</div>`);return}
- if(a==='accent-set'){accent=Object.hasOwn(accentNames,d.value)?d.value:'green';localStorage.setItem('tournament-accent',accent);modal.close();render();return}
+ if(a==='accent-set'){accent=Object.hasOwn(accentNames,d.value)?d.value:'teal';localStorage.setItem('tournament-accent',accent);modal.close();render();return}
  if(a==='simple-toggle'){simplified=!simplified;localStorage.setItem('tournament-ui-mode',simplified?'simple':'advanced');modal.close();render();return}
  if(a==='google-signin'){dialog('Увійти через Google','<p>Google-вхід поки недоступний. Турніри та результати зберігаються на цьому пристрої.</p>');return}
  if(a==='cloud-backup'){dialog('Хмарна резервна копія',`<p>Без входу в Google. Збережіть код доступу: з ним можна відновити турніри й профілі на іншому пристрої.</p>${db.cloudBackup?`<label class="field">Ваш код доступу<textarea readonly rows="3">${backupCode(db.cloudBackup)}</textarea></label><div class="stack">${button('cloud-code','Скопіювати код')}</div>`:''}<div class="stack">${button('cloud-save','Зберегти копію в хмару','primary')}${button('cloud-restore','Відновити за кодом')}${button('export-all',icon('download')+' Зберегти у файл')}${button('import',icon('upload')+' Відновити з файлу')}</div>`);return}
  if(a==='elo-help'){dialog('Як розраховуються зміни Ело?','<p>Зміна рейтингу залежить від результату партії, рейтингу суперника та коефіцієнта K. Для турніру без рейтингу вимкніть «Рейтинги й аналіз» у додаткових налаштуваннях.</p>');return}
- if(a==='directory-player-menu'){dialog('Дії з гравцем',`<div class="stack">${button('edit-directory-player','Редагувати профіль','','data-id="'+esc(d.id)+'"')}${button('delete-directory-player','Видалити профіль','danger','data-id="'+esc(d.id)+'"')}</div>`);return}
+ if(a==='directory-player-menu'){openActionMenu(d.id);return}
+ if(a==='fullscreen-toggle'){
+ if(document.fullscreenElement){await document.exitFullscreen();return}
+ if(!document.documentElement.requestFullscreen){showToast('Цей браузер не підтримує повний екран. Додайте сайт на головний екран.',true);return}
+ try{await document.documentElement.requestFullscreen();history.pushState({...history.state,tournamentFullscreen:true},'',location.href);fullscreenHistory=true;render()}catch{showToast('Браузер не дозволив увімкнути повний екран.',true)}return
+ }
  if(a==='language-menu'){dialog('Мова',`<div class="stack">${button('language-choose','Українська',language==='uk'?'primary':'','data-language="uk"')}${button('language-choose','English',language==='en'?'primary':'','data-language="en"')}</div>`);return}
  if(a==='language-choose'){language=d.language==='en'?'en':'uk';localStorage.setItem('tournament-language',language);modal.close();render();return}
  if(a==='theme-choose'){dialog('Тема',`<div class="stack">${[['light','Світла тема'],['dark','Темна тема'],['system','Як на пристрої']].map(([value,text])=>button('theme-set',text,theme===value?'primary':'','data-value="'+value+'"')).join('')}</div>`);return}
@@ -440,7 +451,7 @@ async function submit(form,intent='manage') {
   }
   if(formId==='settings-form'){if(current().status!=='draft')throw new Error('Правила зафиксированы.');if(!tieOrder.length)throw new Error('Выберите хотя бы один коэффициент.');change('Изменён регламент',t=>{t.name=data.name.trim();t.control=data.control;t.plannedRounds=t.system==='roundrobin'?t.plannedRounds:Number(data.rounds);t.tiebreaks=[...tieOrder]});modal.close();showToast('Регламент сохранён.');return}
 }
-document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el||el.disabled)return;if(modal.open&&!modal.contains(el))return;Promise.resolve(act(el.dataset.action,el.dataset)).then(()=>{if(['tab','home','nav','open','open-history','archive-tour'].includes(el.dataset.action)&&modal.open)modal.close()}).catch(e=>showToast(e.message,true))});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!e.target.closest('.action-menu')&&el?.dataset.action!=='directory-player-menu')closeActionMenu();if(e.target.closest('.action-menu'))closeActionMenu();if(!el||el.disabled)return;if(modal.open&&!modal.contains(el))return;Promise.resolve(act(el.dataset.action,el.dataset)).then(()=>{if(['tab','home','nav','open','open-history','archive-tour'].includes(el.dataset.action)&&modal.open)modal.close()}).catch(e=>showToast(e.message,true))});
 document.addEventListener('submit',e=>{if(!['create-form','draft-config-form','duration-form','add-player-form','add-team-form','directory-player-form','directory-group-form','tournament-player-form','pairings-form','team-lineup-form','saved-picker-form','trf-import-form','bulk-form','settings-form','tiebreak-form','cloud-restore-form'].includes(e.target.getAttribute('id')))return;e.preventDefault();Promise.resolve(submit(e.target,e.submitter?.dataset.intent||'manage')).catch(e=>showToast(e.message,true))});
 document.addEventListener('change',async e=>{
   try{
@@ -474,10 +485,17 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',()=>{render();syncPublications()});window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.1')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.2')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();
 syncPublications();setInterval(()=>{if(navigator.onLine&&!document.hidden)syncPublications()},15000);
 document.addEventListener('input',e=>{if(e.target.id==='directory-search'){directorySearch=e.target.value;const pos=e.target.selectionStart;render();const field=document.querySelector('#directory-search');field.focus();field.setSelectionRange(pos,pos);}});
 document.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.target.matches('[role=button][data-action]')){e.preventDefault();e.target.click();}});
+
+let fullscreenHistory=false;
+window.addEventListener('popstate',()=>{if(fullscreenHistory){fullscreenHistory=false;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});}});
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&fullscreenHistory){fullscreenHistory=false;history.back();}if(route()==='account')render();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeActionMenu()});
+window.addEventListener('scroll',closeActionMenu,{passive:true});
+window.addEventListener('resize',closeActionMenu);
