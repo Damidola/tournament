@@ -165,6 +165,13 @@ Object.assign(maps.en, {
  'Зберегти остаточні рейтинги':'Save final ratings',
  'Після завершення турніру можна зберегти остаточні рейтинги у профілях.':'After the tournament, final ratings can be saved to player profiles.'
 });
+Object.assign(maps.en, {
+ 'Встановити застосунок':'Install app','Відкрити без адресного рядка':'Open without the address bar',
+ 'У меню браузера ⋮ виберіть «Встановити застосунок» або «Додати на головний екран». Після встановлення застосунок відкриватиметься без адресного рядка браузера, а системний рядок телефона залишиться зверху.':'In the browser menu ⋮ choose “Install app” or “Add to Home Screen”. After installation, the app opens without the browser address bar while the phone status bar remains visible.',
+ 'У Safari натисніть «Поділитися», потім «На початковий екран». Після встановлення застосунок відкриватиметься без адресного рядка браузера, а системний рядок телефона залишиться зверху.':'In Safari, tap “Share”, then “Add to Home Screen”. After installation, the app opens without the browser address bar while the phone status bar remains visible.',
+ 'Після встановлення відкривайте турніри з головного екрана.':'After installation, open tournaments from the home screen.',
+ 'Застосунок відкрито без адресного рядка.':'The app is already open without the address bar.','Застосунок встановлено.':'App installed.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
