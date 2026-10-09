@@ -3,7 +3,7 @@ import { RESULTS, statistics, teamStatistics, isTeamSystem } from './engine.js';
 // The app uses the same Material icon glyphs as the Android reference.
 const materialNames = {
   account: 'account_circle', cloud: 'cloud_upload', sun: 'light_mode',
-  shield: 'privacy_tip', star: 'star', share: 'share', bars: 'bar_chart', globe: 'language'
+  shield: 'privacy_tip', star: 'star', share: 'share', bars: 'bar_chart', globe: 'language', fullscreen:'fullscreen', fullscreenExit:'fullscreen_exit'
 };
 const solidIcon = name => `<span class="icon material-icon native-solid-icon" aria-hidden="true">${materialNames[name] || materialNames.bars}</span>`;
 const chevron = '<span class="icon material-icon native-chevron" aria-hidden="true">chevron_right</span>';
@@ -17,6 +17,7 @@ export function renderAccount({ button, esc, theme = 'light', language='uk', sim
     ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.teal}</span></span>${chevron}`,'native-card theme-card')}
     ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Дитячий режим</strong><span>${simpleMode?'Увімкнено':'Вимкнено'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
     ${row('cloud-backup','cloud','Резервні копії')}
+    ${row('fullscreen-toggle',document.fullscreenElement?'fullscreenExit':'fullscreen','Повноекранний режим',document.fullscreenElement?'Увімкнено':'Вимкнено')}
   </section>`;
 }
 
