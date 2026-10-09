@@ -447,3 +447,4 @@ button:not(.icon-btn):not(.nav-item),summary{overflow-wrap:anywhere}
 :root:fullscreen{background:#050805}:root:fullscreen body{box-sizing:border-box;min-height:100dvh;padding-top:max(env(safe-area-inset-top),24px);background:linear-gradient(#050805 0 max(env(safe-area-inset-top),24px),var(--bg) max(env(safe-area-inset-top),24px))}:root:fullscreen .topbar{top:max(env(safe-area-inset-top),24px)}:root:fullscreen .mobile-nav{bottom:env(safe-area-inset-bottom)}
 
 .header-actions{display:flex;align-items:center;gap:0;flex-shrink:0}.topbar .fullscreen-button{margin-left:0}
+@media(max-width:420px){.archive-tabs{gap:6px}.archive-tabs>button:not(.home-statistics-link){padding:7px 4px;font-size:12px;white-space:nowrap;letter-spacing:-.15px}.home-statistics-link{flex-basis:44px!important;width:44px;min-width:44px;height:44px;padding:6px}}
