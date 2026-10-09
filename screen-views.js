@@ -13,14 +13,12 @@ export function renderAccount({ button, esc, theme = 'light' }) {
   return `<section class="account-screen native-screen">
     <section class="native-card account-card">
       <div class="account-card-heading"><span class="account-avatar">${solidIcon('account')}</span><div><h2>Обліковий запис</h2><p>Вхід не виконано</p></div><span class="account-status-icon">${solidIcon('account')}</span></div>
-      <button type="button" class="btn account-google" disabled title="Google-вхід поки не підключено"><span class="google-letter" aria-hidden="true">G</span><span>Google-вхід недоступний</span></button>
+      ${button('google-signin', '<img class="google-logo" src="./assets/google.png" alt=""><span>Увійти через Google</span>', 'account-google')}
     </section>
     <section class="native-card cloud-card">
       <h2>${solidIcon('cloud')}<span>Хмарна резервна копія</span></h2>
-      <p>Зберігайте турніри, гравців і дані застосунку в резервній копії, щоб відновити їх на іншому пристрої.</p>
-      <p class="cloud-unavailable">Поки доступна резервна копія у файл.</p>
-      ${button('export-all', solidIcon('cloud') + ' Зберегти резервну копію', 'primary account-backup-button')}
-      ${button('import', 'Відновити з файлу', 'account-backup-restore')}
+      <p>Зберігайте турніри, гравців і дані застосунку в підключеному хмарному обліковому записі, щоб відновити їх на іншому пристрої.</p>
+      ${button('cloud-backup', solidIcon('account') + '<span class="cloud-button-label">Увійдіть, щоб використовувати хмарну копію</span>', 'primary account-backup-button')}
     </section>
     ${button('theme-choose', `<span class="account-setting-icon">${solidIcon('sun')}</span><span class="account-setting-text"><strong>Тема</strong><span>${esc(themes[theme] || themes.light)}</span></span>${chevron}`, 'native-card theme-card')}
   </section>`;
@@ -114,7 +112,7 @@ export function renderStatistics(db, { button, esc, fmt, kind = 'players' }) {
       const preview = leaders.length > 1 ? `<small data-user-content>${esc(leaders.slice(0, 2).map(p => p.name).join(', '))}${leaders.length > 2 ? ', +' + (leaders.length - 2) : ''}</small>` : '';
       return button('stats-record', `<span class="stats-record-icon">${solidIcon('bars')}</span><span class="stats-record-copy"><span class="stats-record-title">${recordLabels[metric]}</span><strong ${leaders.length === 1 ? 'data-user-content' : ''}>${esc(name)}</strong>${preview}</span><strong class="stats-record-value">${fmt(value)}</strong>${chevron}`, 'native-card stats-record', `data-kind="${team ? 'teams' : 'players'}" data-metric="${metric}"`);
     }).join('')}</div>
-    ${rows.length ? `<h2 class="stats-section-heading stats-participants-heading">${team ? 'Команди' : 'Гравці'}</h2><div class="stats-participants">${rows.map(p => button('stats-profile', `<span class="stats-participant-name" data-user-content>${esc(p.name)}</span><span class="stats-participant-games">${fmt(p.played)} ${team ? 'матчів' : 'партій'}</span>${chevron}`, 'native-card stats-participant', `data-kind="${team ? 'teams' : 'players'}" data-name="${esc(p.name)}"`)).join('')}</div>` : ''}
+    ${rows.length ? `<details class="stats-all-players"><summary>${team ? 'Команди' : 'Гравці'}</summary><div class="stats-participants">${rows.map(p => button('stats-profile', `<span class="stats-participant-name" data-user-content>${esc(p.name)}</span><span class="stats-participant-games">${fmt(p.played)} ${team ? 'матчів' : 'партій'}</span>${chevron}`, 'native-card stats-participant', `data-kind="${team ? 'teams' : 'players'}" data-name="${esc(p.name)}"`)).join('')}</div></details>` : ''}
   </section>`;
 }
 

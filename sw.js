@@ -1,11 +1,45 @@
-const CACHE = 'tournament-shell-v3.1.0';
-const FILES = ['./', './index.html', './style.css', './apk-style.css', './mobile-interactions.css', './screen-views.js', './app.js', './i18n.js', './trf.js', './apk-core.js', './engine.js', './storage.js', './icon.svg', './manifest.webmanifest', './assets/fonts/roboto-regular.ttf', './assets/fonts/roboto-medium.ttf', './assets/fonts/roboto-bold.ttf', './assets/fonts/material-icons.ttf'];
-self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES))));
-self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('tournament-shell-') && k !== CACHE).map(k => caches.delete(k)))).then(()=>self.clients.claim())));
+const VERSION = '3.2.0';
+const CACHE = 'tournament-shell-v' + VERSION;
+const FILES = ['./', './index.html', './mobile.css?v=' + VERSION, './app.js?v=' + VERSION, './screen-views.js?v=' + VERSION, './i18n.js', './trf.js', './apk-core.js', './engine.js', './storage.js', './icon.svg', './manifest.webmanifest', './assets/google.png', './assets/fonts/roboto-regular.ttf', './assets/fonts/roboto-medium.ttf', './assets/fonts/roboto-bold.ttf', './assets/fonts/material-icons.ttf'];
+self.addEventListener('install', event => event.waitUntil((async () => {
+  const cache = await caches.open(CACHE);
+  await cache.addAll(FILES.map(url => new Request(url, { cache: 'reload' })));
+  await self.skipWaiting();
+})()));
+function pageVersion(client) {
+  return new Promise(resolve => {
+    const channel = new MessageChannel();
+    const timeout = setTimeout(() => { channel.port1.close(); resolve(null); }, 1000);
+    channel.port1.onmessage = event => { clearTimeout(timeout); channel.port1.close(); resolve(event.data); };
+    client.postMessage({ type: 'GET_APP_VERSION' }, [channel.port2]);
+  });
+}
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  await self.clients.claim();
+  const pages = await self.clients.matchAll({ type: 'window' });
+  await Promise.all(pages.map(async client => {
+    if (await pageVersion(client) === VERSION) return;
+    const url = new URL(client.url);
+    if (!url.pathname.startsWith(self.registration.scope.replace(url.origin, ''))) return;
+    url.searchParams.set('v', VERSION);
+    // Navigation fetches wait for activation; start it without blocking activation.
+    client.navigate(url.href).catch(() => {});
+  }));
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(key => key.startsWith('tournament-shell-') && key !== CACHE).map(key => caches.delete(key)));
+})()));
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(event.request).then(response => {
-    if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, copy))); }
-    return response;
-  }).catch(() => caches.match(event.request).then(cached => cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()))));
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const response = await fetch(event.request, { cache: 'no-store' });
+      if (response.ok) event.waitUntil(cache.put(event.request, response.clone()));
+      return response;
+    } catch {
+      const cached = await cache.match(event.request, { ignoreSearch: true });
+      return cached || (event.request.mode === 'navigate' ? await cache.match('./index.html') : null) || Response.error();
+    }
+  })());
 });
+

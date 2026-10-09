@@ -94,6 +94,16 @@ Object.assign(maps.en, {
   'Створено': 'Created',
   'Продовжити': 'Continue'
 });
+Object.assign(maps.en, {
+  'Новий гравець':'New player', 'Інші дані гравця':'Other player details',
+  'Готово':'Done', 'Результати після туру':'Results after round', 'Усі результати':'All results',
+  'Завантажити CSV':'Download CSV', 'Друк або PDF':'Print or PDF',
+  'Історія жеребкування':'Pairing history', 'Жеребкувань ще немає.':'No pairings yet.',
+  'Зберегти у файл':'Save to file', 'Увійдіть, щоб використовувати хмарну копію':'Sign in to use cloud backup',
+  'Зберігайте дані у файл або відновіть їх із збереженої копії. Хмарна синхронізація поки недоступна.':'Save your data to a file or restore an existing backup. Cloud sync is currently unavailable.',
+  'Google-вхід поки недоступний. Турніри та результати зберігаються на цьому пристрої.':'Google sign-in is currently unavailable. Tournaments and results are saved on this device.',
+  'Зберігайте турніри, гравців і дані застосунку в підключеному хмарному обліковому записі, щоб відновити їх на іншому пристрої.':'Save tournaments, players and app data to your connected cloud account to restore them on another device.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
