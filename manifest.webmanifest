@@ -1,1 +1,1 @@
-{"name":"Турнір — шахи під контролем","short_name":"Турнір","lang":"uk","start_url":"./","scope":"./","display":"standalone","background_color":"#f6f7f2","theme_color":"#2d6e1c","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{"name":"Менеджер шахових турнірів","short_name":"Турнір","lang":"uk","start_url":"./","scope":"./","display":"standalone","background_color":"#f7f8f3","theme_color":"#31701f","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}

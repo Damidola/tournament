@@ -1,0 +1,252 @@
+/* Touch and scrolling behavior, kept separate from the APK screen styling. */
+button,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
+button > svg,
+button > svg * {
+  pointer-events: none;
+}
+
+@media (max-width: 740px),
+  (max-width: 960px) and (max-height: 560px) and (pointer: coarse) {
+  html {
+    overflow-x: clip;
+    overflow-y: auto;
+    scroll-padding-top: 76px;
+    scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+
+  body,
+  #app {
+    min-height: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* A swipe anywhere on a round must move the page, not a nested pane. */
+  #app[data-screen="tour"][data-tab="rounds"] .main {
+    display: block;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  #app[data-screen="tour"][data-tab="rounds"] .tour-screen,
+  #app[data-screen="tour"][data-tab="rounds"] .tour-grid,
+  #app[data-screen="tour"][data-tab="rounds"] .round-section,
+  #app[data-screen="tour"][data-tab="rounds"] .round-section > .panel {
+    display: block;
+    height: auto;
+    min-height: 0;
+    flex: none;
+  }
+
+  #app[data-screen="tour"][data-tab="rounds"] .matches-body,
+  .matches-body {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+    flex: none;
+  }
+
+  .tour-screen .rounds-tabs {
+    position: static;
+  }
+
+  #app[data-screen="tour"][data-tab="rounds"] .round-footer {
+    position: static;
+    bottom: auto;
+    margin-top: 12px;
+    padding-bottom: 0;
+  }
+
+  .rounds-tabs,
+  .table-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: auto;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .round-chip {
+    flex-shrink: 0;
+  }
+
+  .icon-btn,
+  .match-head .icon-btn,
+  .tie-buttons button,
+  .round-stepper button {
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+
+  .btn,
+  .result-btn,
+  .round-chip,
+  .tab,
+  .tour-screen .tab,
+  .language-switch,
+  .directory-player,
+  .rank-table .player-link,
+  .player-name,
+  button.player-link {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .result-btn,
+  .player-name,
+  .btn,
+  .tab {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .field input,
+  .field select,
+  .field textarea,
+  .directory-filters input,
+  .directory-filters select {
+    font-size: 16px;
+    min-height: 48px;
+    min-width: 0;
+    scroll-margin-block: 88px;
+  }
+
+  .directory-filters,
+  .panel-head,
+  .participant,
+  .inline-setting {
+    min-width: 0;
+  }
+
+  .participant > .row {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .participant > .btn,
+  .participant > .icon-btn {
+    flex-shrink: 0;
+  }
+
+  .mobile-nav {
+    height: auto;
+    min-height: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .new-fab {
+    bottom: calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .sticky-action .btn {
+    white-space: normal;
+    min-height: 48px;
+  }
+
+  /* The dialog itself scrolls: its last field and save button stay reachable. */
+  dialog {
+    width: calc(100% - 20px);
+    max-width: 600px;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-top: 76px;
+    scroll-padding-bottom: 24px;
+  }
+
+  .modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    gap: 12px;
+    background: var(--paper, #fff);
+  }
+
+  .modal-head h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .modal-head .icon-btn {
+    flex-shrink: 0;
+  }
+
+  .modal-body {
+    min-height: 0;
+    overflow: visible;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .modal-actions {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .modal-actions .btn {
+    flex: 1 1 120px;
+    min-width: 0;
+    min-height: 48px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #toast {
+    pointer-events: none;
+  }
+}
+
+/* A keyboard or landscape phone should not leave a fixed bar over the form. */
+@media (max-width: 740px) and (max-height: 560px),
+  (max-width: 960px) and (max-height: 560px) and (pointer: coarse) {
+  .topbar,
+  body:has(.tour-screen) .topbar {
+    position: relative;
+  }
+
+  .sticky-action {
+    position: static;
+    margin-top: 16px;
+  }
+
+  dialog {
+    max-height: calc(100dvh - 12px);
+  }
+}
+
+@media (min-width: 741px) and (max-width: 960px) and (max-height: 560px) and (pointer: coarse) {
+  .sidebar {
+    display: none;
+  }
+
+  .main,
+  body:has(.tour-screen) .main {
+    margin-left: 0;
+    padding-inline: 12px;
+    max-width: 100%;
+  }
+}
+
+@media print {
+  #app[data-screen="tour"][data-tab="rounds"] .main {
+    min-height: 0;
+    padding: 0;
+  }
+}

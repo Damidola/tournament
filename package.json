@@ -1,4 +1,10 @@
 {
-  "name": "tournament", "version": "3.0.0", "private": true, "type": "module",
-  "scripts": { "test": "node --test --test-isolation=none tests/*.test.js", "start": "python3 -m http.server 4173" }
+  "name": "tournament",
+  "version": "3.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-isolation=none tests/*.test.js",
+    "start": "python3 -m http.server 4173"
+  }
 }

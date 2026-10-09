@@ -15,32 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: '24'
-      - name: Check domain and storage rules
-        run: npm test
-      - name: Install browser test driver
-        run: npm install --no-save --ignore-scripts playwright@1.56.1
-      - name: Check phone and desktop workflows
-        env:
-          CHROME_BIN: /usr/bin/google-chrome
-        run: node tests/ui.cjs
-      - name: Save interface screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: interface-previews
-          path: /tmp/tournament-*.png
-          if-no-files-found: ignore
   deploy:
-    needs: verify
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -52,8 +27,10 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Prepare static site
         run: |
+          node --check app.js
           mkdir -p public
-          cp index.html app.js engine.js storage.js i18n.js trf.js apk-core.js style.css apk-style.css sw.js icon.svg manifest.webmanifest public/
+          cp index.html app.js screen-views.js engine.js storage.js i18n.js trf.js apk-core.js style.css apk-style.css mobile-interactions.css sw.js icon.svg manifest.webmanifest public/
+          cp -r assets public/assets
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

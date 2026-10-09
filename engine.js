@@ -190,8 +190,9 @@ export function knockoutStatistics(t,through=t.rounds.length) {
 export function roundRobin(t,number) {
   if(number<1||number>roundCount(t.players.length,t.roundRobinFormat))throw new Error('Такого туру немає.');
   const ids=new Map(t.players.map(p=>[p.name,p.id]));
-  const request={operation:'roundRobin',round:number,double:t.roundRobinFormat==='double',players:[...t.players].sort((a,b)=>a.seed-b.seed).map(p=>({id:p.name,rating:p.initialRating??p.rating??0}))};
+  const request={operation:'roundRobin',round:number,double:t.roundRobinFormat==='double',seeding:t.roundRobinSeeding||'standard',...(t.initialRows?{initialRows:t.initialRows}:{}),players:[...t.players].sort((a,b)=>a.seed-b.seed).map(p=>({id:p.name,rating:p.initialRating??p.rating??0}))};
   const result=originalCore(request),matches=result.matches.map(m=>({id:uid(),white:ids.get(m.white),black:m.black===null?null:ids.get(m.black),result:null,...(m.black===null?{byePoints:0,rest:true}:{})}));
+  if(result.initialRows&&!t.initialRows)t.initialRows=clone(result.initialRows);
   Object.defineProperty(matches,'reference',{value:{request,diagnostics:result.diagnostics},enumerable:false});return matches;
 }
 
