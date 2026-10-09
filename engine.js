@@ -57,7 +57,7 @@ export function createTournament({
   roundRobinFormat = 'single', pairingMode, pairingEngine, initialColor = 'random',
   byeScorePolicy = 'WIN', requestedByeScorePolicy = 'DRAW', boardCount = 2,
   knockoutSeeding = 'balanced', transitionMinutes = 0, arenaRounds, ratingCategory = 'standard',
-  automaticEloUpdates = true, knockoutThirdPlace = false
+  knockoutThirdPlace = false
 } = {}) {
   const safeSystem = SYSTEMS[system] ? system : 'swiss';
   const planned = safeSystem === 'roundrobin' ? Math.max(1, roundCount(2, roundRobinFormat)) : Number(rounds);
@@ -70,7 +70,7 @@ export function createTournament({
     pairingEngine: pairingEngine || (isSwissSystem(safeSystem) ? 'swiss' : safeSystem),
     initialColor, byeScorePolicy, requestedByeScorePolicy, boardCount: Math.max(1, Number(boardCount) || 2),
     knockoutSeeding, knockoutThirdPlace:knockoutThirdPlace===true||knockoutThirdPlace==='true', transitionMinutes: Math.max(0, Number(transitionMinutes) || 0),
-    arenaRounds: Math.max(1, Number(arenaRounds || rounds || 5)), ratingCategory, automaticEloUpdates: Boolean(automaticEloUpdates),
+    arenaRounds: Math.max(1, Number(arenaRounds || rounds || 5)), ratingCategory,
     audit: [], changeLog: [], created: new Date().toISOString(), updated: new Date().toISOString()
   };
 }
@@ -278,25 +278,17 @@ export function setTeamLineup(t,number,matchId,selections) {
   setBoardResult(t,number,matchId,0,match.boards[0].result);
 }
 
-function updateElo(t, round) {
-  if(t.mode==='simple'||t.automaticEloUpdates===false)return;
-  const request={operation:'ratings',players:t.players.map(p=>({id:p.id,rating:p.initialRating??p.eloHistory?.[0]?.before??p.rating??0,k:p.fideKFactor||20,joinedRound:p.joinedRound||1,removedRound:p.removedRound||null})),games:[]};
-  for(const r of t.rounds.filter(r=>r.closed))for(const m of r.matches){for(const game of m.boards||[m])if(game.black&&isPlayedResult(game.result))request.games.push({round:r.number,white:game.white,black:game.black,score:RESULTS[game.result][0]});}
-  const result=originalCore(request);
-  for(const p of t.players){p.initialRating??=request.players.find(x=>x.id===p.id).rating;p.rating=result.final[p.id]??p.initialRating;p.eloHistory=result.history.filter(h=>h.id===p.id).map(h=>({round:h.round,before:h.before,after:h.after,change:h.change}));}
-}
 export function closeRound(t) {
   const r = t.rounds.at(-1); if (!r || r.closed) throw new Error('Немає відкритого туру.');
   if (isKnockoutSystem(t.system)) { for (const m of r.matches) { if (m.bye) continue; if (!m.winner) { if (m.result === '½-½') throw new Error('Для нічиєї оберіть переможця тай-брейку.'); if (!isPlayedResult(m.result)) throw new Error('Вкажіть результат і переможця.'); m.winner = m.result === '1-0' ? m.white : m.result === '0-1' ? m.black : null; } if (!m.winner) throw new Error('Вкажіть переможця кожної партії.'); } }
   else if (isTeamSystem(t.system)) { for (const m of r.matches) if (m.black !== null && (!m.boards?.length || m.boards.some(b => !RESULTS[b.result]))) throw new Error('Внесіть результати всіх дошок.'); }
   else if (r.matches.some(m => m.black !== null && !RESULTS[m.result])) throw new Error('Спочатку внесіть результати всіх партій.');
-  r.ratingsBefore=t.players.map(p=>({id:p.id,rating:p.rating||0,eloHistory:clone(p.eloHistory||[])}));
-  r.closed = true; updateElo(t, r); const limit = isArenaSystem(t.system) ? Infinity : t.plannedRounds; if (t.rounds.length >= limit || isKnockoutSystem(t.system) && r.matches.length === 1) t.status = 'finished';
+  r.closed = true; const limit = isArenaSystem(t.system) ? Infinity : t.plannedRounds; if (t.rounds.length >= limit || isKnockoutSystem(t.system) && r.matches.length === 1) t.status = 'finished';
 }
 
 export function rollback(t, number) {
   if (!Number.isInteger(number) || number < 1 || number > t.rounds.length) throw new Error('Такого туру немає.');
-  for(const p of t.players){const snapshot=t.rounds[number-1].ratingsBefore?.find(x=>x.id===p.id),history=(p.eloHistory||[]).filter(h=>h.round>=number);if(snapshot){p.rating=snapshot.rating;p.eloHistory=clone(snapshot.eloHistory);}else if(history.length){p.rating=history[0].before;p.eloHistory=p.eloHistory.filter(h=>h.round<number);}if(p.joinedRound>number)p.joinedRound=number+1;if(p.removedRound>number)delete p.removedRound;}
+  for(const p of t.players){if(p.joinedRound>number)p.joinedRound=number+1;if(p.removedRound>number)delete p.removedRound;}
   t.rounds = t.rounds.slice(0, number); t.rounds.at(-1).closed = false; t.status = 'active'; t.requestedByes=[];
   if (t.audit) t.audit = t.audit.filter(a => a.round <= number);
 }
@@ -335,7 +327,7 @@ export function replacePairings(t,number,pairs) {
 }
 
 function normaliseForValidation(t) {
-  t.teams ||= []; t.audit ||= []; t.changeLog ||= []; t.roundRobinFormat ||= 'single'; t.pairingMode ||= isSwissSystem(t.system) ? 'flexible' : t.system; t.pairingEngine ||= t.system; t.initialColor ||= 'random'; t.byeScorePolicy ||= 'WIN'; t.requestedByeScorePolicy ||= 'DRAW'; t.boardCount = Math.max(1, Number(t.boardCount || 2)); t.knockoutSeeding ||= 'balanced'; t.automaticEloUpdates = t.automaticEloUpdates !== false; return t;
+  t.teams ||= []; t.audit ||= []; t.changeLog ||= []; t.roundRobinFormat ||= 'single'; t.pairingMode ||= isSwissSystem(t.system) ? 'flexible' : t.system; t.pairingEngine ||= t.system; t.initialColor ||= 'random'; t.byeScorePolicy ||= 'WIN'; t.requestedByeScorePolicy ||= 'DRAW'; t.boardCount = Math.max(1, Number(t.boardCount || 2)); t.knockoutSeeding ||= 'balanced'; delete t.automaticEloUpdates; delete t.finalRatingsCommit; for(const r of t.rounds)delete r.ratingsBefore; for(const p of t.players)delete p.eloHistory; return t;
 }
 
 export function validateTournament(value) {

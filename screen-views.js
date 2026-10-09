@@ -17,7 +17,7 @@ export function renderAccount({ button, esc, theme = 'light', language='uk', sim
     ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.teal}</span></span>${chevron}`,'native-card theme-card')}
     ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Дитячий режим</strong><span>${simpleMode?'Увімкнено':'Вимкнено'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
     ${row('cloud-backup','cloud','Резервні копії')}
-    ${row('fullscreen-toggle',document.fullscreenElement?'fullscreenExit':'fullscreen','Повноекранний режим',document.fullscreenElement?'Увімкнено':'Вимкнено')}
+    ${row('fullscreen-toggle','fullscreen','Повноекранний режим','Час телефону залишається видимим')}
   </section>`;
 }
 
@@ -41,17 +41,14 @@ export function collectStatistics(db) {
   function person(map, p, team = false) {
     const localId = !team && (p.localPlayerId || names.get(normalizedName(p.name)));
     const key = localId ? 'profile:' + localId : 'name:' + normalizedName(p.name);
-    if (!map.has(key)) map.set(key, { key, name: directory.get(localId)?.name || p.name, localPlayerId: localId || null, wins: 0, draws: 0, losses: 0, played: 0, tournamentWins: 0, eloGain: 0, eloTotal: 0, tournaments: [] });
+    if (!map.has(key)) map.set(key, { key, name: directory.get(localId)?.name || p.name, localPlayerId: localId || null, wins: 0, draws: 0, losses: 0, played: 0, tournamentWins: 0, tournaments: [] });
     return map.get(key);
   }
   for (const t of tournaments) {
     const byId = new Map((t.players || []).map(p => [p.id, person(players, p)]));
     for (const p of t.players || []) {
-      const row = byId.get(p.id), history = p.eloHistory || [];
-      const gain = history.length ? history.reduce((sum, h) => sum + Number(h.change || 0), 0) : t.mode === 'advanced' ? Number(p.rating || 0) - Number(p.initialRating ?? p.rating ?? 0) : 0;
-      row.eloGain = Math.max(row.eloGain, gain);
-      row.eloTotal += gain;
-      row.tournaments.push({ id: t.id, name: t.name, status: t.status, wins: 0, draws: 0, losses: 0, played: 0, eloGain: gain, winner: false });
+      const row = byId.get(p.id);
+      row.tournaments.push({ id: t.id, name: t.name, status: t.status, wins: 0, draws: 0, losses: 0, played: 0, winner: false });
     }
     for (const round of t.rounds || []) for (const match of round.matches || []) for (const game of match.boards || [match]) {
       if (!game.black || !playedResults.has(game.result)) continue;
@@ -72,7 +69,7 @@ export function collectStatistics(db) {
         const row = person(teams, p, true), winner = t.status === 'finished' && p.rank === 1;
         for (const field of ['played', 'wins', 'draws', 'losses']) row[field] += p[field];
         if (winner) row.tournamentWins++;
-        row.tournaments.push({ id: t.id, name: t.name, status: t.status, played: p.played, wins: p.wins, draws: p.draws, losses: p.losses, winner, eloGain: 0 });
+        row.tournaments.push({ id: t.id, name: t.name, status: t.status, played: p.played, wins: p.wins, draws: p.draws, losses: p.losses, winner });
       }
     } else if (t.status === 'finished' && t.players?.length) {
       const champion = statistics(t)[0], row = byId.get(champion?.id);
@@ -89,7 +86,7 @@ export function collectStatistics(db) {
 
 const recordLabels = {
   wins: 'Найбільше перемог', draws: 'Найбільше нічиїх',
-  tournamentWins: 'Найбільше перемог у турнірах', eloGain: 'Найкращий приріст Elo'
+  tournamentWins: 'Найбільше перемог у турнірах'
 };
 const recordLeaders = (rows, metric) => {
   const value = Math.max(0, ...rows.map(p => Number(p[metric]) || 0));
@@ -99,7 +96,7 @@ const recordLeaders = (rows, metric) => {
 export function renderStatistics(db, { button, esc, fmt, kind = 'players', simpleMode=true }) {
   const data = collectStatistics(db), team = kind === 'teams', rows = team ? data.teams : data.players;
   const overview = team ? data.teamOverview : data.overview;
-  const metrics = team ? ['wins', 'draws', 'tournamentWins'] : ['wins', 'draws', 'tournamentWins', ...(!simpleMode?['eloGain']:[])];
+  const metrics = ['wins', 'draws', 'tournamentWins'];
   return `<section class="statistics-screen native-screen"><h2 class="stats-section-heading">Огляд</h2>
     <div class="stats-overview">${[['tournaments', 'Турніри'], ['participants', team ? 'Команди' : 'Учасники'], ['games', team ? 'Матчі' : 'Партії'], ['draws', 'Нічиї']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(overview[field])}</strong></div>`).join('')}</div>
     <div class="stats-kind-tabs">${button('stats-kind', 'Гравці', kind === 'players' ? 'primary selected' : '', 'data-kind="players" aria-pressed="' + (kind === 'players') + '"')}${button('stats-kind', 'Команди', team ? 'primary selected' : '', 'data-kind="teams" aria-pressed="' + team + '"')}</div>
@@ -122,5 +119,5 @@ export function renderStatisticsRecord(db, { button, esc, fmt, kind = 'players',
 export function renderStatisticsProfile(db, { button, esc, fmt, kind = 'players', name, simpleMode=true }) {
   const data = collectStatistics(db), row = (kind === 'teams' ? data.teams : data.players).find(p => p.name === name);
   if (!row) return '<p>Учасника не знайдено.</p>';
-  return `<div class="stats-profile-detail"><div class="stats-overview">${[['played', kind === 'teams' ? 'Матчі' : 'Партії'], ['wins', 'Перемоги'], ['draws', 'Нічиї'], ['losses', 'Поразки']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(row[field])}</strong></div>`).join('')}</div><p>Перемоги у турнірах: <strong>${fmt(row.tournamentWins)}</strong></p>${!simpleMode&&kind !== 'teams' ? `<p>Найкращий приріст Elo: <strong>+${fmt(row.eloGain)}</strong></p>` : ''}<h3>Турніри</h3>${row.tournaments.map(t => button('open', `<span data-user-content>${esc(t.name)}</span><small>${t.winner ? 'Переможець · ' : ''}${fmt(t.wins)} перемог · ${fmt(t.draws)} нічиїх</small>${chevron}`, 'native-card stats-profile-tournament', `data-id="${esc(t.id)}"`)).join('')}</div>`;
+  return `<div class="stats-profile-detail"><div class="stats-overview">${[['played', kind === 'teams' ? 'Матчі' : 'Партії'], ['wins', 'Перемоги'], ['draws', 'Нічиї'], ['losses', 'Поразки']].map(([field, title]) => `<div class="native-card stats-tile"><h3>${title}</h3><strong>${fmt(row[field])}</strong></div>`).join('')}</div><p>Перемоги у турнірах: <strong>${fmt(row.tournamentWins)}</strong></p><h3>Турніри</h3>${row.tournaments.map(t => button('open', `<span data-user-content>${esc(t.name)}</span><small>${t.winner ? 'Переможець · ' : ''}${fmt(t.wins)} перемог · ${fmt(t.draws)} нічиїх</small>${chevron}`, 'native-card stats-profile-tournament', `data-id="${esc(t.id)}"`)).join('')}</div>`;
 }
