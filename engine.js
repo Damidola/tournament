@@ -197,7 +197,7 @@ export function roundRobin(t,number) {
 }
 
 export function swiss(t) {
-  const number=t.rounds.length+1, all=statistics(t), byName=new Map(t.players.map(p=>[p.name,p.id]));
+  const number=t.rounds.length+1, all=statistics({...t,tiebreaks:defaultTiebreaks(t.system)}), byName=new Map(t.players.map(p=>[p.name,p.id]));
   const requested=new Set(t.requestedByes || []);
   const rows=all.filter(p=>(p.joinedRound||1)<=number&&(!p.removedRound||p.removedRound>number)&&!requested.has(p.id));
   const initialColor=t.resolvedInitialColor||(t.initialColor==='random'?(Math.random()<.5?'white':'black'):t.initialColor);
@@ -213,7 +213,7 @@ export function swiss(t) {
 }
 
 function arenaPairings(t) {
-  const number=t.rounds.length+1,rows=playerStatistics(t),previous=t.rounds.at(-1),active=rows.filter(p=>(p.joinedRound||1)<=number&&(!p.removedRound||p.removedRound>number));
+  const number=t.rounds.length+1,rows=playerStatistics({...t,tiebreaks:defaultTiebreaks(t.system)}),previous=t.rounds.at(-1),active=rows.filter(p=>(p.joinedRound||1)<=number&&(!p.removedRound||p.removedRound>number));
   const history=t.rounds.flatMap(r=>r.matches.filter(m=>m.black!==null&&isPlayedResult(m.result)).map(m=>({white:m.white,black:m.black,previous:r===previous})));
   const previousOrder=previous?.arenaOrder||previous?.matches.flatMap(m=>[m.white,m.black]).filter(Boolean)||[];
   const request={operation:'arenaPair',round:number,previousOrder,newPlayers:active.filter(p=>!previousOrder.includes(p.id)).map(p=>p.id),removedPlayers:rows.filter(p=>p.removedRound&&p.removedRound<=number).map(p=>p.id),requestedByes:t.requestedByes||[],history,byes:Object.fromEntries(rows.map(p=>[p.id,p.byes])),previousBye:previous?.matches.find(m=>m.black===null&&!m.requested)?.white||null,colors:Object.fromEntries(rows.map(p=>[p.id,p.colors]))};
@@ -223,7 +223,7 @@ function arenaPairings(t) {
   Object.defineProperty(matches,'reference',{value:{request,diagnostics:result.diagnostics,arenaOrder:result.order},enumerable:false});return matches;
 }
 function teamPairings(t) {
-  const rows=teamStatistics(t),number=t.rounds.length+1,names=new Map(t.teams.map(p=>[p.id,p.name])),ids=new Map(t.teams.map(p=>[p.name,p.id])),players=new Map(t.players.map(p=>[p.id,p]));
+  const rows=teamStatistics({...t,tiebreaks:defaultTiebreaks(t.system)}),number=t.rounds.length+1,names=new Map(t.teams.map(p=>[p.id,p.name])),ids=new Map(t.teams.map(p=>[p.name,p.id])),players=new Map(t.players.map(p=>[p.id,p]));
   const initialColor=t.resolvedInitialColor||(t.initialColor==='random'?(Math.random()<.5?'white':'black'):t.initialColor);
   const request={operation:'teamPair',round:number,boardCount:t.boardCount,initialColor,forcedBye:names.get(t.requestedByes?.[0])||null,teams:rows.map(team=>({id:team.name,seed:team.seed,mp:team.matchPoints,gp:team.gamePoints,opponents:team.opponents.map(id=>names.get(id)),colors:team.colors,hadBye:team.byes>0,played:team.played,previousFloater:team.previousFloater||false,players:team.players.map(id=>({id,rating:players.get(id)?.rating||0,k:players.get(id)?.fideKFactor||20}))}))};
   const result=originalCore(request),matches=result.matches.map(m=>({id:uid(),white:ids.get(m.white),black:ids.get(m.black),result:null,teamMatch:true,boards:m.boards.map(b=>({...b,whiteTeam:ids.get(b.whiteTeam),blackTeam:ids.get(b.blackTeam),result:null})),whiteGamePoints:0,blackGamePoints:0,whiteMatchPoints:0,blackMatchPoints:0}));

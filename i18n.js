@@ -153,6 +153,18 @@ Object.assign(maps.en, {
  'Цей браузер не підтримує повний екран. Додайте сайт на головний екран.':'This browser does not support full screen. Add the site to your home screen.',
  'Браузер не дозволив увімкнути повний екран.':'The browser did not allow full screen.'
 });
+Object.assign(maps.en, {
+ 'Коефіцієнти при рівності очок':'Tiebreaks for equal points','Змінити порядок':'Change priority','Стартові очки':'Starting points','Вилучити':'Withdraw','Повернути':'Reinstate',
+ 'Можна додати гравця зі стартовими очками або вилучити зі наступних турів. Попередні результати зберігаються.':'Add a player with starting points or withdraw a player from future rounds. Previous results are preserved.',
+ 'Завершіть поточний тур, щоб додати або вилучити гравців.':'Finish the current round to add or withdraw players.',
+ 'Турнір завершено. Склад і результати збережено.':'Tournament completed. Roster and results are preserved.',
+ 'Тай-брейки визначають місця за однакової кількості очок.':'Tiebreaks determine places when points are equal.',
+ 'Вибраний порядок коефіцієнтів не змінює пари наступних турів.':'The selected tiebreak priority does not change future round pairings.',
+ 'Рейтинги Elo':'Elo ratings','Автоматичне оновлення вимкнено.':'Automatic updates are disabled.',
+ 'Після завершення кожного туру розраховується зміна локального рейтингу. Це оцінка сили гри, а не офіційний рейтинг FIDE.':'Local rating changes are calculated after each completed round. These estimate playing strength and are not official FIDE ratings.',
+ 'Зберегти остаточні рейтинги':'Save final ratings',
+ 'Після завершення турніру можна зберегти остаточні рейтинги у профілях.':'After the tournament, final ratings can be saved to player profiles.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
