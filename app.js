@@ -1,11 +1,11 @@
-import {confirmFinalRatings,reconcileFinalRatings} from './ratings-sync.js?v=3.4.0';
-import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.0';
+import {confirmFinalRatings,reconcileFinalRatings} from './ratings-sync.js?v=3.4.1';
+import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.1';
 import { RESULTS, TIEBREAKS, SYSTEMS, uid, fmt, clone, createTournament, statistics, teamStatistics, roundCount, addRound, closeRound, rollback, requestBye, withdrawPlayer, setResult, setBoardResult, setKnockoutWinner, validateTournament, isSwissSystem, isTeamSystem, isKnockoutSystem, isArenaSystem } from './engine.js';
 import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.0';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.1';
 
 const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
@@ -73,7 +73,7 @@ function syncPublications(){
 }
 function publicationDialog(){
  const t=current(),enabled=t.publicShare?.enabled;
- dialog('Посилання для батьків',`<p>Жеребківка поточного й попередніх турів та таблиця місць. Без входу, рейтингів і контактних даних. Посилання залишається тим самим.</p>${enabled?`<label class="field">Постійне посилання<input id="public-link" value="${esc(publicLink(t))}" readonly></label><p class="publish-status">${publicationStatus(t)}</p><div class="stack">${button('public-copy',icon('copy')+' Скопіювати посилання','primary')}${button('public-update','Оновити зараз')}${button('public-stop','Вимкнути публікацію','danger')}</div>`:`<div class="modal-actions">${button('public-enable','Опублікувати безкоштовно','primary')}</div>`}`);
+ dialog('Посилання для батьків',`<p>Пари поточного й попередніх турів та таблиця місць. Без входу, рейтингів і контактних даних. Посилання залишається тим самим.</p>${enabled?`<label class="field">Постійне посилання<input id="public-link" value="${esc(publicLink(t))}" readonly></label><p class="publish-status">${publicationStatus(t)}</p><div class="stack">${button('public-copy',icon('copy')+' Скопіювати посилання','primary')}${button('public-update','Оновити зараз')}${button('public-stop','Вимкнути публікацію','danger')}</div>`:`<div class="modal-actions">${button('public-enable','Опублікувати безкоштовно','primary')}</div>`}`);
 }
 function change(label, action) {
   const next = clone(db), t = next.tournaments.find(x => x.id === currentId);
@@ -112,7 +112,7 @@ function layout(content){
 }
 function home(){
  const archived=filter==='archived',tournaments=db.tournaments.filter(t=>Boolean(t.archived)===archived);
- return `<div class="archive-tabs"><button data-action="home-filter" data-filter="all" class="${!archived?'selected':''}">Нещодавні (${db.tournaments.filter(t=>!t.archived).length})</button><button data-action="home-filter" data-filter="archived" class="${archived?'selected':''}">Архівні (${db.tournaments.filter(t=>t.archived).length})</button></div>${tournaments.length?`<div class="cards home-cards">${tournaments.map(t=>`<article class="tournament-card ${t.status}" data-action="open" data-id="${esc(t.id)}" tabindex="0" role="button"><button class="card-menu icon-btn" data-action="home-tour-menu" data-id="${esc(t.id)}" aria-label="Дії з турніром">${icon('more')}</button><h3 data-user-content>${esc(t.name)}</h3><p>${isArenaSystem(t.system)?'':`Усього турів: ${t.plannedRounds} · `}${isTeamSystem(t.system)?'Команди':'Гравці'}: ${isTeamSystem(t.system)?t.teams.length:t.players.length}</p><div class="row wrap"><span class="badge format-badge">${labelSystem(t)}</span><span class="badge status-badge">${t.status==='finished'?'Завершено':t.status==='draft'?'Підготовка':'Триває'}</span></div></article>`).join('')}</div>`:`<div class="empty-state">${icon('cup')}<h3>${archived?'Архів порожній':'Турнірів ще немає'}</h3><p>Створіть турнір або відкрийте приклад.</p>${button('demo','Демонстраційний турнір')}</div>`}<button class="btn primary new-fab" data-action="new">${icon('plus')} Новий турнір</button>`;
+ return `<div class="archive-tabs"><button data-action="home-filter" data-filter="all" class="${!archived?'selected':''}">Нещодавні (${db.tournaments.filter(t=>!t.archived).length})</button><button data-action="home-filter" data-filter="archived" class="${archived?'selected':''}">Архівні (${db.tournaments.filter(t=>t.archived).length})</button></div>${tournaments.length?`<div class="cards home-cards">${tournaments.map(t=>`<article class="tournament-card ${t.status}" data-action="open" data-id="${esc(t.id)}" tabindex="0" role="button"><button class="card-menu icon-btn" data-action="home-tour-menu" data-id="${esc(t.id)}" aria-label="Дії з турніром">${icon('more')}</button><h3 data-user-content>${esc(t.name)}</h3><p>${isArenaSystem(t.system)?'':`Усього турів: ${t.plannedRounds} · `}${isTeamSystem(t.system)?'Команди':'Гравці'}: ${isTeamSystem(t.system)?t.teams.length:t.players.length}</p><div class="tournament-meta"><span class="badge format-badge">${labelSystem(t)}</span><span class="badge status-badge">${t.status==='finished'?'Завершено':t.status==='draft'?'Підготовка':'Триває'}</span></div></article>`).join('')}</div>`:`<div class="empty-state">${icon('cup')}<h3>${archived?'Архів порожній':'Турнірів ще немає'}</h3><p>Створіть турнір або відкрийте приклад.</p>${button('demo','Демонстраційний турнір')}</div>`}<button class="btn primary new-fab" data-action="new">${icon('plus')} Новий турнір</button>`;
 }
 function directoryPage(){
  const people=loadDirectory(),section=directorySection||'players';
@@ -204,7 +204,7 @@ function teamPlayersPage(t) {
 }
 function historyPage(t){
  const history=db.history[t.id]||[],audits=t.audit||[];
- return `<section class="panel"><div class="panel-body">${history.map(h=>`<div class="history-item"><div><strong>${esc(h.label)}</strong><small>${stamp(h.at)}</small></div>${button('restore-ask','Відновити','','data-id="'+esc(h.id)+'"')}</div>`).join('')||'<p class="muted">Історія з’явиться після першої зміни.</p>'}</div></section><details class="panel history-audit"><summary>Історія жеребкування</summary><div class="panel-body">${audits.map(a=>`<div class="history-item"><div><strong>Тур ${a.round}</strong><small>${stamp(a.at)} · ${a.pairings?.length||0} пар</small></div>${button('audit-view','Переглянути','','data-round="'+a.round+'"')}</div>`).join('')||'<p class="muted">Жеребкувань ще немає.</p>'}</div></details>`;
+ return `<section class="panel"><div class="panel-body">${history.map(h=>`<div class="history-item"><div><strong>${esc(h.label)}</strong><small>${stamp(h.at)}</small></div>${button('restore-ask','Відновити','','data-id="'+esc(h.id)+'"')}</div>`).join('')||'<p class="muted">Історія з’явиться після першої зміни.</p>'}</div></section><details class="panel history-audit"><summary>Історія турів</summary><div class="panel-body">${audits.map(a=>`<div class="history-item"><div><strong>Тур ${a.round}</strong><small>${stamp(a.at)} · ${a.pairings?.length||0} пар</small></div>${button('audit-view','Переглянути','','data-round="'+a.round+'"')}</div>`).join('')||'<p class="muted">Турів ще немає.</p>'}</div></details>`;
 }
 function backupPage() {
   const legacy=stored('tournament-organizer-v1');
@@ -218,7 +218,7 @@ function pairingsDialog(t) {
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme,simpleMode:simplified,accent,accentNames};
  const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
- root.dataset.build='3.4.0';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+ root.dataset.build='3.4.1';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -278,7 +278,7 @@ async function act(a,d) {
  if(a==='ratings-review'){dialog('Підтвердити остаточні рейтинги',`<p>Попередні рейтинги перераховуються після кожного закритого туру. Збережіть остаточні значення у профілі гравців.</p><div class="stack">${t.players.map(p=>`<div class="participant"><strong data-user-content>${esc(p.name)}</strong><span>${p.initialRating||0} → <b>${p.rating||0}</b></span></div>`).join('')}</div><div class="modal-actions">${button('dismiss','Скасувати')}${button('ratings-confirm','Зберегти в профілі','primary')}</div>`);return}
  if(a==='ratings-confirm'){change('Підтверджено остаточні рейтинги',confirmFinalRatings);modal.close();showToast('Остаточні рейтинги збережено у профілях.');return}
  if(a==='publish-dialog'){publicationDialog();return}
- if(a==='public-enable'){if(!t.publicShare)t.publicShare={...newCapability(),enabled:false};change('Увімкнено сторінку для батьків',x=>{x.publicShare={...t.publicShare,enabled:true}});showToast('Публікую жеребківку…');await publishTournament(current());publicationDialog();return}
+ if(a==='public-enable'){if(!t.publicShare)t.publicShare={...newCapability(),enabled:false};change('Увімкнено сторінку для батьків',x=>{x.publicShare={...t.publicShare,enabled:true}});showToast('Публікую тури…');await publishTournament(current());publicationDialog();return}
  if(a==='public-copy'){const url=publicLink(t);if(navigator.share){try{await navigator.share({title:t.name,url})}catch(e){if(e.name!=='AbortError')throw e}}else{await navigator.clipboard.writeText(url);showToast('Посилання скопійовано.')}return}
  if(a==='public-update'){await publishTournament(t);publicationDialog();showToast('Публічну сторінку оновлено.');return}
  if(a==='public-stop'){await stopPublication(t);change('Вимкнено сторінку для батьків',x=>{x.publicShare.enabled=false});publicationDialog();return}
@@ -474,7 +474,7 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',()=>{render();syncPublications()});window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.0')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.1')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();

@@ -1,4 +1,4 @@
-const VERSION = '3.4.0';
+const VERSION = '3.4.1';
 const CACHE = 'tournament-shell-v' + VERSION;
 const FILES = ['./', './index.html', './mobile.css?v=' + VERSION, './app.js?v=' + VERSION, './live-share.js?v=' + VERSION, './ratings-sync.js?v=' + VERSION, './screen-views.js?v=' + VERSION, './i18n.js', './trf.js', './apk-core.js', './engine.js', './storage.js', './icon.svg', './manifest.webmanifest', './assets/google.png', './assets/fonts/roboto-regular.ttf', './assets/fonts/roboto-medium.ttf', './assets/fonts/roboto-bold.ttf', './assets/fonts/material-icons.ttf'];
 self.addEventListener('install', event => event.waitUntil((async () => {

@@ -44,13 +44,13 @@ small,.small{font-size:13px}.muted{color:var(--muted)}.eyebrow{font-size:12px;fo
 .main{margin:0;padding:0 14px 24px;min-height:100dvh;width:100%;height:auto;overflow:visible}
 .primary-screen{padding-bottom:154px}.secondary-screen{padding-bottom:24px}
 .sidebar{display:none}
-.topbar{height:56px;min-height:56px;margin:0 -14px 16px;padding:0 7px;display:flex;align-items:center;gap:5px;position:sticky;top:0;z-index:20;background:var(--bg);border:0}
+.topbar{height:auto;min-height:56px;margin:0 -14px 12px;padding:8px 7px;display:flex;align-items:center;gap:5px;position:sticky;top:0;z-index:20;background:var(--bg);border:0}
 .native-primary-bar{background:var(--primary);color:var(--on-primary)}
 .native-primary-bar .icon-btn{color:var(--on-primary)}
 .native-secondary-bar{color:var(--primary)}
 .header-spacer{width:44px;flex:0 0 44px}
 .app-title{flex:1;min-width:0;text-align:center}
-.app-title h1{font-size:19px;line-height:1.2}
+.app-title h1{font-size:17px;line-height:1.25;overflow-wrap:anywhere}
 .app-title p{font-size:13px;font-weight:700;line-height:1.2;margin-top:4px;color:var(--ink)}
 .mobile-nav{position:fixed;z-index:30;left:0;right:0;bottom:0;display:flex;align-items:flex-start;justify-content:space-around;gap:4px;height:calc(72px + env(safe-area-inset-bottom));padding:14px 10px calc(12px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0;background:var(--nav);color:var(--nav-muted)}
 .mobile-nav button{min-width:44px;min-height:44px;padding:0;flex:1;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--nav-muted)}
@@ -70,12 +70,12 @@ small,.small{font-size:13px}.muted{color:var(--muted)}.eyebrow{font-size:12px;fo
 .archive-tabs button,.directory-tabs button,.stats-kind-tabs button{flex:1;min-width:0;min-height:44px;padding:9px 10px;border:1px solid var(--line);border-radius:26px;background:var(--surface);color:var(--ink);font-size:15px;line-height:1.25}
 .archive-tabs button.selected,.directory-tabs button.selected,.stats-kind-tabs button.selected{background:var(--primary);color:var(--on-primary);border-color:transparent}
 .home-heading{display:none}.home-cards,.cards{display:grid;gap:14px}
-.tournament-card{position:relative;min-height:116px;padding:17px 46px 15px 16px;text-align:left;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--primary);border-radius:22px;box-shadow:var(--shadow);cursor:pointer}
+.tournament-card{position:relative;min-height:98px;padding:13px 12px 12px 14px;text-align:left;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--primary);border-radius:22px;box-shadow:var(--shadow);cursor:pointer}
 .tournament-card.finished{border-left-color:var(--red)}
-.tournament-card h3{font-size:19px;margin-bottom:8px;overflow-wrap:anywhere}
-.tournament-card p{font-size:14px;font-weight:700;margin-bottom:9px}
+.tournament-card h3{font-size:17px;margin-bottom:6px;padding-right:34px;overflow-wrap:anywhere}
+.tournament-card p{font-size:12px;font-weight:700;margin-bottom:8px;overflow-wrap:anywhere}
 .card-menu{position:absolute;right:5px;top:5px}
-.tournament-card .badge{font-size:11px}
+.tournament-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}.tournament-meta .format-badge{min-width:0;overflow-wrap:anywhere}.tournament-meta .status-badge{flex-shrink:0;margin-left:auto;white-space:nowrap}.tournament-card .badge{font-size:11px;padding:4px 8px}
 .status-badge{background:var(--chip);color:var(--primary)}
 .finished .status-badge{background:#fbe1df;color:#a62828}
 [data-theme=dark] .finished .status-badge{background:#442826;color:#ffb5af}
@@ -118,7 +118,7 @@ small,.small{font-size:13px}.muted{color:var(--muted)}.eyebrow{font-size:12px;fo
 .cloud-card h2 .icon{color:var(--primary)}
 .cloud-card p{font-size:15px;font-weight:700;line-height:1.55;color:var(--muted);margin-bottom:16px}
 .account-backup-button{width:100%;min-width:0;min-height:48px;max-width:100%;font-size:16px;padding:10px 13px;overflow:hidden}
-.account-backup-button .cloud-button-label{display:block;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-backup-button .cloud-button-label{display:block;flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere}
 .theme-card{width:100%;display:flex;align-items:center;gap:14px;text-align:left;padding:16px;min-height:82px;color:var(--ink)}
 .account-setting-icon{color:var(--primary)}.account-setting-icon .icon{width:30px;height:30px;font-size:30px}
 .account-setting-text{flex:1;display:flex;flex-direction:column;gap:5px}
@@ -358,10 +358,10 @@ dialog.player-dialog[open]{display:flex;flex-direction:column;height:min(640px,c
 .player-profile{background:transparent;padding:0;border:0;color:var(--ink);text-align:inherit;min-height:44px}
 /* Phone scale: compact cards while result buttons retain a 44px touch target. */
 @media(max-width:740px){
- .topbar{height:52px;min-height:52px;margin-bottom:12px}
- .app-title h1{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .topbar{height:auto;min-height:52px;margin-bottom:12px}
+ .app-title h1{font-size:15px;white-space:normal;overflow-wrap:anywhere}
  .app-title p{font-size:12px;margin-top:3px}
- .native-secondary-bar:has(.app-title p){height:58px;min-height:58px}
+ .native-secondary-bar:has(.app-title p){height:auto;min-height:58px}
  .directory-count{font-size:15px;margin-bottom:12px}
  .directory-tabs{gap:8px;margin-bottom:10px}
  .directory-tabs button{font-size:14px;padding:8px;border-radius:18px}
@@ -427,3 +427,6 @@ dialog.player-dialog[open]{display:flex;flex-direction:column;height:min(640px,c
 :root[data-simple=true] .directory-card-heading{margin-bottom:0}
 :root[data-simple=true] .directory-card{min-height:62px}
 :root[data-simple=true] .config-label{font-size:15px}
+
+.native-primary-bar .header-spacer{width:12px;flex-basis:12px}
+button:not(.icon-btn):not(.nav-item),summary{overflow-wrap:anywhere}
