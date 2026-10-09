@@ -53,7 +53,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p public
-          cp index.html app.js engine.js storage.js style.css sw.js icon.svg manifest.webmanifest public/
+          cp index.html app.js engine.js storage.js i18n.js trf.js apk-core.js style.css apk-style.css sw.js icon.svg manifest.webmanifest public/
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

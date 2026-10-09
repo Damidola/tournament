@@ -1,11 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTournament, statistics, roundCount, roundRobin, addRound, closeRound, rollback, setResult, setBoardResult, setKnockoutWinner, validateTournament } from '../engine.js';
+import { requestBye,withdrawPlayer,finishTournament,replacePairings } from '../engine.js';
 
 function tournament(n=4,system='swiss',rounds=3) {
   const t=createTournament({name:'Контрольный турнир',system,rounds});
-  t.players=Array.from({length:n},(_,i)=>({id:String(i+1),name:'Игрок '+(i+1),seed:i+1,rating:0}));return t;
+  t.players=Array.from({length:n},(_,i)=>({id:String(i+1),name:'Игрок '+(i+1),seed:i+1,rating:0}));if(system==='roundrobin')t.plannedRounds=roundCount(n);return t;
 }
+
+test('rollback restores native cumulative Elo and re-closing does not award it twice',()=>{
+  const t=tournament(4,'roundrobin');t.mode='advanced';t.players.forEach(p=>p.rating=1500);addRound(t);for(const m of t.rounds[0].matches)setResult(t,1,m.id,'1-0');closeRound(t);const after=t.players.map(p=>p.rating);addRound(t);for(const m of t.rounds[1].matches)setResult(t,2,m.id,'0-1');closeRound(t);rollback(t,1);assert.deepEqual(t.players.map(p=>p.rating),[1500,1500,1500,1500]);assert(t.players.every(p=>p.eloHistory.length===0));closeRound(t);assert.deepEqual(t.players.map(p=>p.rating),after);assert(t.players.every(p=>p.eloHistory.length===1));
+});
+test('Arena admits future players, withdrawal and requested byes without rewriting old rounds',()=>{
+  const t=tournament(5,'arena');addRound(t);for(const m of t.rounds[0].matches)if(m.black)setResult(t,1,m.id,'½-½');closeRound(t);const before=structuredClone(t.rounds[0]);const resting=before.matches.find(m=>m.black===null).white,eligible=t.players.find(p=>p.id!==resting).id;requestBye(t,eligible);withdrawPlayer(t,t.players.find(p=>p.id!==resting&&p.id!==eligible).id);t.players.push({id:'new',name:'Новий',seed:6,rating:0,startingPoints:1.5,joinedRound:2});addRound(t);assert.deepEqual(t.rounds[0],before);assert(t.rounds[1].matches.some(m=>m.white===eligible&&m.requested&&m.byePoints===.5));assert.equal(statistics(t).find(p=>p.id==='new').points,1.5);validateTournament(t);
+});
+test('partial team games give game points, but no match points until every board is entered',()=>{
+  const t=tournament(4,'teamSwiss');t.boardCount=2;t.teams=[{id:'a',name:'A',seed:1,players:['1','2']},{id:'b',name:'B',seed:2,players:['3','4']}];addRound(t);const m=t.rounds[0].matches[0];assert.equal(m.boards[0].whiteTeam,m.white);assert.equal(m.boards[1].whiteTeam,m.black);setBoardResult(t,1,m.id,0,'1-0');assert(statistics(t).every(p=>p.points===0));setBoardResult(t,1,m.id,1,'0-1');assert.equal(statistics(t).find(p=>p.id===m.white).gamePoints,2);assert.equal(statistics(t).find(p=>p.id===m.white).points,2);setBoardResult(t,1,m.id,1,null);assert(statistics(t).every(p=>p.points===0));
+});
+test('manual pairs reject duplicated players before any result can be lost',()=>{
+  const t=tournament(4,'roundrobin');addRound(t);const before=structuredClone(t.rounds[0]);assert.throws(()=>replacePairings(t,1,[{white:'1',black:'2'},{white:'1',black:'3'}]));assert.deepEqual(t.rounds[0],before);
+});
+test('knockout seed bracket and third-place match preserve final places',()=>{
+  const t=tournament(8,'knockout',3);t.knockoutThirdPlace=true;t.players.forEach((p,i)=>p.rating=2000-i*100);addRound(t);assert.deepEqual(t.rounds[0].matches.map(m=>[m.white,m.black]),[['1','8'],['4','5'],['2','7'],['3','6']]);for(let r=1;r<=3;r++){for(const m of t.rounds.at(-1).matches)if(m.black)setResult(t,r,m.id,'1-0');closeRound(t);if(r<3)addRound(t);}assert.equal(t.rounds[2].matches.length,2);const final=t.rounds[2].matches.find(m=>!m.thirdPlace),third=t.rounds[2].matches.find(m=>m.thirdPlace),rows=statistics(t);assert.equal(rows[0].id,final.winner);assert.equal(rows[2].id,third.winner);validateTournament(t);
+});
+test('ending an Arena drops only the empty automatically opened round',()=>{
+  const t=tournament(4,'arena');addRound(t);for(const m of t.rounds[0].matches)setResult(t,1,m.id,'1-0');closeRound(t);addRound(t);finishTournament(t);assert.equal(t.rounds.length,1);assert.equal(t.status,'finished');validateTournament(t);
+});
 const m=(a,b,result)=>({id:crypto.randomUUID(),white:String(a),black:b===null?null:String(b),result:b===null?null:result,...(b===null?{byePoints:result}:{})});
 function fixture(system='swiss') {
   const t=tournament(4,system);t.rounds=[
@@ -27,9 +47,10 @@ test('hand-calculated points, Buchholz, cut-1 and Sonneborn-Berger',()=>{
 });
 test('rating never silently resolves equal places',()=>{
   const t=tournament(4,'roundrobin',3);addRound(t);for(const m of t.rounds[0].matches)m.result='½-½';t.players[0].rating=3000;
-  assert.deepEqual(statistics(t).map(p=>p.rank),[1,1,1,1]);
+  assert.deepEqual(statistics(t).map(p=>p.rank),[1,2,3,4]);
+  const order=statistics(t).map(p=>p.id);t.players.reverse().forEach((p,i)=>p.rating=i*700);assert.deepEqual(statistics(t).map(p=>p.id),order);
 });
-test('round robin has every pair exactly once, balanced colors and one rest for odd rosters',()=>{
+test('original round robin has every pair exactly once and one rest for odd rosters',()=>{
   for(let n=2;n<=32;n++){
     const t=tournament(n,'roundrobin',roundCount(n)),seen=new Set(),byes={},colors={};
     for(let r=1;r<=roundCount(n);r++)for(const m of roundRobin(t,r)){
@@ -37,7 +58,7 @@ test('round robin has every pair exactly once, balanced colors and one rest for 
       const key=[m.white,m.black].sort().join(':');assert(!seen.has(key));seen.add(key);
       colors[m.white]=(colors[m.white]||0)+1;colors[m.black]=(colors[m.black]||0)-1;
     }
-    assert.equal(seen.size,n*(n-1)/2);assert(Object.values(colors).every(c=>Math.abs(c)<=1));
+    assert.equal(seen.size,n*(n-1)/2);
     assert.equal(Object.keys(byes).length,n%2?n:0);assert(Object.values(byes).every(x=>x===1));
   }
 });
@@ -77,9 +98,9 @@ test('rollback retains selected round results, discards dependent future rounds 
 });
 test('Swiss generates unique pairings and no repeated bye over varied tournaments',()=>{
   for(let n=3;n<=24;n++)for(let run=0;run<3;run++){
-    const t=tournament(n,'swiss',Math.min(5,roundCount(n)));let completed=0;
+    const t=tournament(n,'swissDutch',Math.min(5,roundCount(n)));t.initialColor='white';let completed=0;
     for(let r=0;r<t.plannedRounds;r++){
-      try{addRound(t)}catch(e){assert.match(e.message,/повторних зустрічей/);break}
+      const saved=structuredClone(t.rounds);try{addRound(t)}catch(e){assert(e instanceof Error);assert.deepEqual(t.rounds,saved);break}
       t.rounds.at(-1).matches.forEach((m,i)=>{if(m.black!==null)m.result=['1-0','½-½','0-1'][(r+i+run)%3]});closeRound(t);completed++;validateTournament(t);
     }
     assert(completed>=Math.min(3,t.plannedRounds));

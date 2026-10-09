@@ -1,6 +1,6 @@
 import { clone, validateTournament } from './engine.js';
 const SLOTS = ['tournament-v2-a', 'tournament-v2-b'];
-export const emptyDatabase = () => ({ version: 2, revision: 0, tournaments: [], history: {} });
+export const emptyDatabase = () => ({ version: 2, revision: 0, tournaments: [], history: {}, localPlayers: [], playerLists: [], savedTeams: [] });
 export function checksum(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -10,16 +10,27 @@ export function validateDatabase(data) {
   if (!data || data.version !== 2 || !Array.isArray(data.tournaments) || data.tournaments.length > 100 ||
       !Number.isSafeInteger(data.revision) || data.revision < 0) throw new Error('Це не резервна копія Турніру версії 2.');
   const db = clone(data), ids = new Set(); db.history ||= {};
+  db.localPlayers ||= []; db.playerLists ||= []; db.savedTeams ||= [];
+  for (const items of [db.localPlayers, db.playerLists, db.savedTeams]) {
+    if (!Array.isArray(items) || items.length > 5000) throw new Error('Пошкоджено каталог гравців.');
+    const seen = new Set();
+    for (const item of items) {
+      if (!item || typeof item.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(item.id) || seen.has(item.id) || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 100) throw new Error('Пошкоджено профіль або список гравців.');
+      seen.add(item.id);
+      if (items === db.localPlayers) for (const key of ['rating', 'rapidElo', 'blitzElo']) if (item[key] != null && (!Number.isInteger(item[key]) || item[key] < 0 || item[key] > 3500)) throw new Error('Пошкоджено рейтинг гравця.');
+      if (items !== db.localPlayers && (!Array.isArray(item.players) || item.players.some(id => !db.localPlayers.some(p => p.id === id)))) throw new Error('У списку є невідомий гравець.');
+    }
+  }
   if (typeof db.history !== 'object' || Array.isArray(db.history)) throw new Error('Пошкоджено історію турнірів.');
+  db.tournaments=db.tournaments.map(validateTournament);
   for (const t of db.tournaments) {
-    validateTournament(t);
     if (ids.has(t.id)) throw new Error('У копії повторюються турніри.'); ids.add(t.id);
     const history = db.history[t.id] || [];
     if (!Array.isArray(history) || history.length > 30) throw new Error('Пошкоджено історію турніру.');
     for (const item of history) {
       if (!item || typeof item.id !== 'string' || typeof item.label !== 'string' || item.label.length > 200 ||
           typeof item.at !== 'string' || item.snapshot?.id !== t.id) throw new Error('Пошкоджено історію турніру.');
-      validateTournament(item.snapshot);
+      item.snapshot=validateTournament(item.snapshot);
     }
   }
   return db;
