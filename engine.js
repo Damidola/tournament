@@ -164,7 +164,7 @@ export function teamStatistics(t, through = t.rounds.length) {
     a.entries.push({ round: round.number, opponent: b.id, score: mpA }); b.entries.push({ round: round.number, opponent: a.id, score: mpB });
   }
   for (const p of rows) { p.mp = p.matchPoints; p.gp = p.gamePoints; p.bh = p.entries.reduce((s, e) => s + (map.get(e.opponent)?.matchPoints || 0), 0); p.bhc1 = p.bh; p.sb = p.entries.reduce((s, e) => s + (map.get(e.opponent)?.matchPoints || 0) * e.score, 0); }
-  rows.sort((a, b) => b.points - a.points || b.gamePoints - a.gamePoints || (t.tiebreaks||['bh']).reduce((d,k)=>d||((b[k]||0)-(a[k]||0)),0) || (a.name<b.name?-1:1));
+  rows.sort((a, b) => b.points - a.points || (t.tiebreaks||['bh']).reduce((d,k)=>d||((b[k]||0)-(a[k]||0)),0) || (a.name<b.name?-1:1));
   rows.forEach((p, i) => {p.rank=i+1;});
   return rows;
 }
@@ -176,7 +176,7 @@ export function statistics(t, through = t.rounds.length) {
   for (const p of rows) for (const e of p.entries) if (e.opponent) direct.set(`${p.id}:${e.opponent}`, (direct.get(`${p.id}:${e.opponent}`)||0)+e.score);
   for (const p of rows) p.de = rows.filter(q => q.id !== p.id && q.points === p.points).reduce((sum, q) => sum + (direct.get(`${p.id}:${q.id}`) || 0), 0);
   rows.sort((a, b) => b.points - a.points || (t.tiebreaks || []).reduce((d, key) => d || ((b[key] || 0) - (a[key] || 0)), 0) ||
-    ((t.tiebreaks || []).includes('de') ? ((direct.get(`${b.id}:${a.id}`) || 0) - (direct.get(`${a.id}:${b.id}`) || 0)) : 0) || (a.name<b.name?-1:a.name>b.name?1:0));
+    (a.name<b.name?-1:a.name>b.name?1:0));
   rows.forEach((p, i) => { p.rank=i+1; });
   return rows;
 }

@@ -110,6 +110,21 @@ Object.assign(maps.en, {
  'Пари за очками, без повторних суперників.':'Pairings by score, without repeat opponents.',
  'Кожен гравець зустрічається з усіма іншими.':'Every player faces every other player.'
 });
+Object.assign(maps.en, {
+ 'Коефіцієнти й порядок місць':'Tiebreaks and ranking order', 'Порядок місць':'Ranking order',
+ 'Коефіцієнти':'Tiebreaks', 'Зберегти й перерахувати':'Save and recalculate',
+ 'Підняти критерій':'Move criterion up', 'Опустити критерій':'Move criterion down',
+ 'Очки завжди перші. Позначте потрібні критерії та змінюйте їхній пріоритет стрілками. Наступний критерій порівнюється лише за рівності попереднього.':'Points always come first. Select tiebreaks and use the arrows to change their priority. Each criterion applies only when previous criteria are tied.',
+ 'Можна змінити в будь-який момент, навіть після завершення турніру. Результати партій зберігаються, місця перераховуються.':'You can change this any time, even after the tournament ends. Game results are preserved and standings are recalculated.',
+ 'Коефіцієнти збережено. Місця перераховано.':'Tiebreaks saved. Standings recalculated.',
+ 'Кожен наступний критерій застосовується за рівності попередніх.':'Each subsequent criterion applies when previous criteria are tied.',
+ 'Рейтинг не визначає місце.':'Rating does not determine rank.',
+ 'За рівності всіх критеріїв — порядок за іменем.':'If all criteria are tied, names determine the display order.',
+ 'Бухгольц — сума очок суперників; БХ−1 — без найменшого внеску.':'Buchholz is the sum of opponents’ points; BH−1 excludes the lowest contribution.',
+ 'Зоннеборн — Бергер — сума «очки суперника × ваш результат».':'Sonneborn–Berger is the sum of opponents’ points multiplied by your result.',
+ 'Для пропусків і неявок внески обчислюються окремо за правилами обраної системи.':'Byes and forfeits are calculated separately under the selected system’s rules.',
+ 'Натисніть на гравця в таблиці, щоб побачити внесок кожного туру в коефіцієнти.':'Tap a player in the standings to see each round’s tiebreak contribution.'
+});
 const compiled = new Map();
 export function translate(value, language = "uk") {
   const locale=language === "en" ? "en" : "uk";
