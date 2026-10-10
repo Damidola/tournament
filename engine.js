@@ -48,8 +48,8 @@ const defaultTiebreaks = system => {
   if (system === 'roundrobin') return ['sb'];
   if (system === 'teamSwiss') return ['mp', 'gp', 'bh'];
   if (system === 'knockout') return [];
-  if (system === 'arena') return ['bh', 'bhc1', 'wins'];
-  return ['bh', 'bhc1', 'sb', 'wins', 'de'];
+  if (system === 'arena') return ['bhc1', 'bh', 'wins'];
+  return ['bhc1', 'bh', 'sb', 'wins', 'de'];
 };
 
 export function createTournament({
