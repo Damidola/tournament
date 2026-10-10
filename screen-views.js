@@ -17,7 +17,7 @@ export function renderAccount({ button, esc, theme = 'light', language='uk', sim
     ${button('accent-choose',`<span class="accent-swatch" data-color="${accent}"></span><span class="account-setting-text"><strong>Акцентний колір</strong><span>${accentNames[accent]||accentNames.teal}</span></span>${chevron}`,'native-card theme-card')}
     ${button('simple-toggle',`<span class="account-setting-icon">${solidIcon('account')}</span><span class="account-setting-text"><strong>Дитячий режим</strong><span>${simpleMode?'Увімкнено':'Вимкнено'}</span></span><span class="native-switch-display ${simpleMode?'checked':''}" aria-hidden="true"></span>`,'native-card theme-card','role="switch" aria-checked="'+simpleMode+'"')}
     ${row('cloud-backup','cloud','Резервні копії')}
-    ${row('fullscreen-toggle','fullscreen','Повноекранний режим','Час телефону залишається видимим')}
+    ${row('fullscreen-toggle',document.fullscreenElement?'fullscreenExit':'fullscreen','Повноекранний режим',document.fullscreenElement?'Увімкнено':'Вимкнено')}
   </section>`;
 }
 

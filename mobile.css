@@ -448,3 +448,12 @@ button:not(.icon-btn):not(.nav-item),summary{overflow-wrap:anywhere}
 
 .header-actions{display:flex;align-items:center;gap:0;flex-shrink:0}.topbar .fullscreen-button{margin-left:0}
 @media(max-width:420px){.archive-tabs{gap:6px}.archive-tabs>button:not(.home-statistics-link){padding:7px 4px;font-size:12px;white-space:nowrap;letter-spacing:-.15px}.home-statistics-link{flex-basis:44px!important;width:44px;min-width:44px;height:44px;padding:6px}}
+
+/* Reserve an opaque, fixed top band on phones in browser fullscreen. */
+@media (max-width:900px), (pointer:coarse){
+ html:fullscreen{--fullscreen-top:max(28px,env(safe-area-inset-top));background:#050805;scroll-padding-top:calc(var(--fullscreen-top) + 72px)}
+ html:fullscreen body{padding-top:var(--fullscreen-top)}
+ html:fullscreen::before{content:"";position:fixed;inset:0 0 auto;height:var(--fullscreen-top);background:#050805;z-index:2147483647;pointer-events:auto}
+ html:fullscreen .topbar{position:sticky;top:var(--fullscreen-top)}
+ html:fullscreen dialog{max-height:calc(100dvh - var(--fullscreen-top) - 24px);margin-top:calc(var(--fullscreen-top) + 12px);margin-bottom:12px}
+}

@@ -1,10 +1,10 @@
-import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.8';
+import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.9';
 import { RESULTS, TIEBREAKS, SYSTEMS, uid, fmt, clone, createTournament, statistics, teamStatistics, roundCount, addRound, closeRound, rollback, requestBye, withdrawPlayer, setResult, setBoardResult, setKnockoutWinner, validateTournament, isSwissSystem, isTeamSystem, isKnockoutSystem, isArenaSystem } from './engine.js';
 import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.8';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.9';
 
 const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',fullscreen:'fullscreen',fullscreenExit:'fullscreen_exit',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',edit:'edit',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
@@ -15,8 +15,6 @@ const labelSystem = t => ({roundrobin:'Коловий турнір',knockout:'Н
 const date = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleDateString(language==='en'?'en-GB':'uk-UA', { day:'numeric', month:'short' });
 const dateLong = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleDateString(language==='en'?'en-GB':'uk-UA', { day:'numeric', month:'numeric', year:'numeric' });
 const stamp = s => Number.isNaN(new Date(s).getTime()) ? '—' : new Date(s).toLocaleString(language==='en'?'en-GB':'uk-UA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-let installPrompt = null;
-window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event});
 let db, fatal = '', filter = 'all', wizard = { mode:'simple', system:'swissDutch', chosen:true, step:'format' }, tieOrder = [], toastTimer, recoveryPending, trfPending, cloudPending;
 function translateValue(value) { return translate(value,language); }
 function localizeDOM() {
@@ -226,7 +224,7 @@ function pairingsDialog(t) {
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme,simpleMode:simplified,accent,accentNames};
  const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
- root.dataset.build='3.4.8';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+ root.dataset.build='3.4.9';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -299,10 +297,9 @@ async function act(a,d) {
  if(a==='cloud-backup'){dialog('Хмарна резервна копія',`<p>Без входу в Google. Збережіть код доступу: з ним можна відновити турніри й профілі на іншому пристрої.</p>${db.cloudBackup?`<label class="field">Ваш код доступу<textarea readonly rows="3">${backupCode(db.cloudBackup)}</textarea></label><div class="stack">${button('cloud-code','Скопіювати код')}</div>`:''}<div class="stack">${button('cloud-save','Зберегти копію в хмару','primary')}${button('cloud-restore','Відновити за кодом')}${button('export-all',icon('download')+' Зберегти у файл')}${button('import',icon('upload')+' Відновити з файлу')}</div>`);return}
  if(a==='directory-player-menu'){openActionMenu(d.id);return}
  if(a==='fullscreen-toggle'){
-  const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
-  if(standalone){showToast('Режим застосунку вже активний. Час телефону залишається видимим.');return}
-  if(installPrompt){await installPrompt.prompt();const choice=await installPrompt.userChoice;installPrompt=null;if(choice?.outcome==='accepted')showToast('Застосунок встановлюється. Відкрийте його з головного екрана.');return}
-  showToast('Повний екран із видимим часом доступний у встановленому застосунку.',true);return
+  if(document.fullscreenElement){await document.exitFullscreen();return}
+  if(!document.documentElement.requestFullscreen){showToast('Повноекранний режим недоступний у цьому браузері.',true);return}
+  await document.documentElement.requestFullscreen({navigationUI:'hide'});return
  }
  if(a==='language-menu'){dialog('Мова',`<div class="stack">${button('language-choose','Українська',language==='uk'?'primary':'','data-language="uk"')}${button('language-choose','English',language==='en'?'primary':'','data-language="en"')}</div>`);return}
  if(a==='language-choose'){language=d.language==='en'?'en':'uk';localStorage.setItem('tournament-language',language);modal.close();render();return}
@@ -485,7 +482,7 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',()=>{render();syncPublications()});window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.8')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.9')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();
@@ -497,3 +494,13 @@ document.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)&&e.targ
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeActionMenu()});
 window.addEventListener('scroll',closeActionMenu,{passive:true});
 window.addEventListener('resize',closeActionMenu);
+
+document.addEventListener('fullscreenchange',()=>{
+ const active=Boolean(document.fullscreenElement);
+ for(const el of document.querySelectorAll('[data-action="fullscreen-toggle"]')){
+  el.setAttribute('aria-label',active?'Вийти з повного екрана':'Повноекранний режим');
+  el.title=active?'Вийти з повного екрана':'Повноекранний режим';
+  const glyph=el.querySelector('.icon');if(glyph)glyph.textContent=active?'fullscreen_exit':'fullscreen';
+ }
+ if(route()==='account')render();
+});
