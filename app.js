@@ -1,10 +1,10 @@
-import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.11';
+import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.12';
 import { RESULTS, TIEBREAKS, SYSTEMS, uid, fmt, clone, createTournament, statistics, teamStatistics, roundCount, addRound, closeRound, rollback, requestBye, withdrawPlayer, setResult, setBoardResult, setKnockoutWinner, validateTournament, isSwissSystem, isTeamSystem, isKnockoutSystem, isArenaSystem } from './engine.js';
 import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.11';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.12';
 
 const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',fullscreen:'fullscreen',fullscreenExit:'fullscreen_exit',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',edit:'edit',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
@@ -117,10 +117,11 @@ function openActionMenu(id){
  const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-m.width-8,r.right-m.width))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-m.height-8,r.bottom+4))+'px';menu.querySelector('button').focus();
 }
 function openTournamentMenu(id){
+ const existing=document.querySelector('.tournament-action-menu');if(existing?.dataset.tournamentId===id){closeActionMenu();return}
  closeActionMenu();const anchor=[...root.querySelectorAll('[data-action="home-tour-menu"]')].find(e=>e.dataset.id===id);if(!anchor)return;
  const tour=db.tournaments.find(x=>x.id===id);if(!tour)return;
- const menu=document.createElement('div');menu.className='action-menu tournament-action-menu';menu.setAttribute('role','menu');
- menu.innerHTML=button('home-tour-ranking',icon('board')+' Турнірна таблиця','','data-id="'+esc(id)+'" role="menuitem"')+button('archive-tour',icon(tour.archived?'upload':'download')+' '+(tour.archived?'Відновити':'Архівувати'),'','data-id="'+esc(id)+'" role="menuitem"')+button('delete-tour',icon('trash')+' Видалити','danger','data-id="'+esc(id)+'" role="menuitem"');root.append(menu);localizeDOM();
+ const menu=document.createElement('div');menu.className='action-menu tournament-action-menu';menu.dataset.tournamentId=id;menu.setAttribute('role','menu');
+ menu.innerHTML=button('home-tour-ranking',icon('format_list_numbered')+' Турнірна таблиця','','data-id="'+esc(id)+'" role="menuitem"')+button('archive-tour',icon(tour.archived?'unarchive':'archive')+' '+(tour.archived?'Відновити':'Архівувати'),'','data-id="'+esc(id)+'" role="menuitem"')+button('delete-tour',icon('trash')+' Видалити','danger','data-id="'+esc(id)+'" role="menuitem"');root.append(menu);localizeDOM();
  const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-m.width-8,r.right-m.width))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-m.height-8,r.bottom+4))+'px';menu.querySelector('button').focus();
 }
 function home(){
@@ -231,7 +232,7 @@ function pairingsDialog(t) {
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme,simpleMode:simplified,accent,accentNames};
  const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
-  root.dataset.build='3.4.11';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+  root.dataset.build='3.4.12';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -492,7 +493,7 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',()=>{render();syncPublications()});window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.11')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.12')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();
