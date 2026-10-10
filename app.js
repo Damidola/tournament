@@ -1,10 +1,10 @@
-import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.10';
+import {newCapability,publicLink,publishTournament,publicationStatus,stopPublication,uploadCloud,downloadCloud,backupCode,parseBackupCode} from './live-share.js?v=3.4.11';
 import { RESULTS, TIEBREAKS, SYSTEMS, uid, fmt, clone, createTournament, statistics, teamStatistics, roundCount, addRound, closeRound, rollback, requestBye, withdrawPlayer, setResult, setBoardResult, setKnockoutWinner, validateTournament, isSwissSystem, isTeamSystem, isKnockoutSystem, isArenaSystem } from './engine.js';
 import { emptyDatabase, loadDatabase, persistDatabase, validateDatabase, isStorageKey, recoverDatabase } from './storage.js';
 import { translate } from './i18n.js';
 import { exportTrf,previewTrf,importTrf } from './trf.js';
 import { finishTournament, replacePairings,setTeamLineup } from './engine.js';
-import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.10';
+import { renderAccount, renderStatistics, renderStatisticsRecord, renderStatisticsProfile } from './screen-views.js?v=3.4.11';
 
 const materialSymbols={cup:'emoji_events',people:'manage_accounts',chart:'bar_chart',shield:'verified_user',fullscreen:'fullscreen',fullscreenExit:'fullscreen_exit',plus:'add',arrow:'chevron_right',back:'arrow_back',download:'download',upload:'share',clock:'schedule',check:'check',close:'close',undo:'undo',more:'more_vert',info:'info',settings:'settings',edit:'edit',trash:'delete',board:'grid_view',print:'print',leaf:'eco',copy:'content_copy',account:'account_circle',language:'language',search:'search',personadd:'person_add'};
 const icon=name=>`<span class="icon material-icon" aria-hidden="true">${materialSymbols[name]||name}</span>`;
@@ -116,6 +116,13 @@ function openActionMenu(id){
  const menu=document.createElement('div');menu.className='action-menu';menu.setAttribute('role','menu');menu.innerHTML=button('edit-directory-player',icon('edit')+' Редагувати гравця','','data-id="'+esc(id)+'" role="menuitem"')+button('delete-directory-player',icon('trash')+' Видалити','danger','data-id="'+esc(id)+'" role="menuitem"');root.append(menu);localizeDOM();
  const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-m.width-8,r.right-m.width))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-m.height-8,r.bottom+4))+'px';menu.querySelector('button').focus();
 }
+function openTournamentMenu(id){
+ closeActionMenu();const anchor=[...root.querySelectorAll('[data-action="home-tour-menu"]')].find(e=>e.dataset.id===id);if(!anchor)return;
+ const tour=db.tournaments.find(x=>x.id===id);if(!tour)return;
+ const menu=document.createElement('div');menu.className='action-menu tournament-action-menu';menu.setAttribute('role','menu');
+ menu.innerHTML=button('home-tour-ranking',icon('board')+' Турнірна таблиця','','data-id="'+esc(id)+'" role="menuitem"')+button('archive-tour',icon(tour.archived?'upload':'download')+' '+(tour.archived?'Відновити':'Архівувати'),'','data-id="'+esc(id)+'" role="menuitem"')+button('delete-tour',icon('trash')+' Видалити','danger','data-id="'+esc(id)+'" role="menuitem"');root.append(menu);localizeDOM();
+ const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-m.width-8,r.right-m.width))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-m.height-8,r.bottom+4))+'px';menu.querySelector('button').focus();
+}
 function home(){
  const archived=filter==='archived',tournaments=db.tournaments.filter(t=>Boolean(t.archived)===archived);
  return `<div class="archive-tabs"><button data-action="home-filter" data-filter="all" class="${!archived?'selected':''}">Нещодавні (${db.tournaments.filter(t=>!t.archived).length})</button><button data-action="home-filter" data-filter="archived" class="${archived?'selected':''}">Архівні (${db.tournaments.filter(t=>t.archived).length})</button><button class="home-statistics-link" data-action="nav" data-target="statistics" aria-label="Статистика" title="Статистика">${icon('chart')}</button></div>${tournaments.length?`<div class="cards home-cards">${tournaments.map(t=>`<article class="tournament-card ${t.status}" data-action="open" data-id="${esc(t.id)}" tabindex="0" role="button"><button class="card-menu icon-btn" data-action="home-tour-menu" data-id="${esc(t.id)}" aria-label="Дії з турніром">${icon('more')}</button><h3 data-user-content>${esc(t.name)}</h3><p>${dateLong(t.created)} · ${isArenaSystem(t.system)?'':`Усього турів: ${t.plannedRounds} · `}${isTeamSystem(t.system)?'Команди':'Гравці'}: ${isTeamSystem(t.system)?t.teams.length:t.players.length}</p><div class="tournament-meta"><span class="badge format-badge">${labelSystem(t)}</span><span class="badge status-badge">${t.status==='finished'?'Завершено':t.status==='draft'?'Підготовка':'Триває'}</span></div></article>`).join('')}</div>`:`<div class="empty-state">${icon('cup')}<h3>${archived?'Архів порожній':'Турнірів ще немає'}</h3><p>Створіть турнір або відкрийте приклад.</p>${button('demo','Демонстраційний турнір')}</div>`}<button class="btn primary new-fab" data-action="new">${icon('plus')} Новий турнір</button>`;
@@ -224,7 +231,7 @@ function pairingsDialog(t) {
 function render(){
  const page=route(),helpers={button,icon,esc,fmt,language,theme,simpleMode:simplified,accent,accentNames};
  const content=page==='new'?newPage():page==='account'?renderAccount(helpers):page==='statistics'?renderStatistics(db,{...helpers,kind:statisticsKind}):page==='backup'?backupPage():page==='directory'?directoryPage():page==='tour'&&current()?tourPage(current()):home();
- root.dataset.build='3.4.10';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
+  root.dataset.build='3.4.11';root.dataset.screen=page;root.dataset.tab=tab;root.innerHTML=layout(content);applyTheme();document.title=(page==='tour'&&current()?current().name+' — ':'')+(language==='uk'?'Менеджер шахових турнірів':'Chess Tournament Manager');localizeDOM();
 }
 function settingsDialog() {
   const t=current(); tieOrder=[...t.tiebreaks];
@@ -331,8 +338,11 @@ async function act(a,d) {
   if(a==='format-back'){wizard.step='format';render();return}
   if(a==='round-count'){const input=document.querySelector('[name=rounds]');input.value=Math.max(1,Math.min(255,Number(input.value)+Number(d.delta)));return}
   if(a==='home-filter'){filter=d.filter;render();return}
-  if(a==='home-tour-menu'){const tour=db.tournaments.find(x=>x.id===d.id);dialog(tour.name,`<div class="stack">${button('open','Відкрити турнір','','data-id="'+esc(d.id)+'"')}${button('archive-tour',tour.archived?'Відновити з архіву':'Перенести до архіву','','data-id="'+esc(d.id)+'"')}</div>`);return}
-  if(a==='archive-tour'){const next=clone(db),tour=next.tournaments.find(x=>x.id===d.id);tour.archived=!tour.archived;save(next);modal.close();render();return}
+  if(a==='home-tour-menu'){openTournamentMenu(d.id);return}
+  if(a==='home-tour-ranking'){currentId=d.id;rankingThrough=null;navigate(`tour/${d.id}/ranking`);return}
+  if(a==='archive-tour'){const next=clone(db),tour=next.tournaments.find(x=>x.id===d.id);if(!tour)return;tour.archived=!tour.archived;save(next);render();return}
+  if(a==='delete-tour'){const tour=db.tournaments.find(x=>x.id===d.id);if(!tour)return;dialog('Видалити турнір?',`<p>Турнір «${esc(tour.name)}», його результати та історію буде видалено з цього пристрою.</p><div class="modal-actions">${button('dismiss','Скасувати')}${button('delete-tour-confirm','Видалити','danger','data-id="'+esc(d.id)+'"')}</div>`);return}
+  if(a==='delete-tour-confirm'){const tour=db.tournaments.find(x=>x.id===d.id);if(!tour)return;if(tour.publicShare?.enabled)await stopPublication(tour);const next=clone(db);next.tournaments=next.tournaments.filter(x=>x.id!==d.id);delete next.history[d.id];save(next);modal.close();render();showToast('Турнір видалено.');return}
   if(a==='request-bye'){change('Запит на пропуск туру',x=>requestBye(x,d.id));modal.close();showToast('Зміни застосуються перед наступним туром.');return}
   if(a==='withdraw-player'){change('Зміна участі у наступному турі',x=>withdrawPlayer(x,d.id));modal.close();showToast('Зміни застосуються перед наступним туром.');return}
   if(a==='home'){navigate('home');return}
@@ -448,7 +458,7 @@ async function submit(form,intent='manage') {
   }
   if(formId==='settings-form'){if(current().status!=='draft')throw new Error('Правила зафиксированы.');if(!tieOrder.length)throw new Error('Выберите хотя бы один коэффициент.');change('Изменён регламент',t=>{t.name=data.name.trim();t.control=data.control;t.plannedRounds=t.system==='roundrobin'?t.plannedRounds:Number(data.rounds);t.tiebreaks=[...tieOrder]});modal.close();showToast('Регламент сохранён.');return}
 }
-document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!e.target.closest('.action-menu')&&el?.dataset.action!=='directory-player-menu')closeActionMenu();if(e.target.closest('.action-menu'))closeActionMenu();if(!el||el.disabled)return;if(modal.open&&!modal.contains(el))return;Promise.resolve(act(el.dataset.action,el.dataset)).then(()=>{if(['tab','home','nav','open','open-history','archive-tour'].includes(el.dataset.action)&&modal.open)modal.close()}).catch(e=>showToast(e.message,true))});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!e.target.closest('.action-menu')&&!['directory-player-menu','home-tour-menu'].includes(el?.dataset.action))closeActionMenu();if(e.target.closest('.action-menu'))closeActionMenu();if(!el||el.disabled)return;if(modal.open&&!modal.contains(el))return;Promise.resolve(act(el.dataset.action,el.dataset)).then(()=>{if(['tab','home','nav','open','open-history','archive-tour','home-tour-ranking','delete-tour-confirm'].includes(el.dataset.action)&&modal.open)modal.close()}).catch(e=>showToast(e.message,true))});
 document.addEventListener('submit',e=>{if(!['create-form','draft-config-form','duration-form','add-player-form','add-team-form','directory-player-form','directory-group-form','tournament-player-form','pairings-form','team-lineup-form','saved-picker-form','trf-import-form','bulk-form','settings-form','tiebreak-form','cloud-restore-form'].includes(e.target.getAttribute('id')))return;e.preventDefault();Promise.resolve(submit(e.target,e.submitter?.dataset.intent||'manage')).catch(e=>showToast(e.message,true))});
 document.addEventListener('change',async e=>{
   try{
@@ -482,7 +492,7 @@ window.addEventListener('storage',e=>{if(!isStorageKey(e.key))return;try{db=load
 window.addEventListener('online',()=>{render();syncPublications()});window.addEventListener('offline',render);
 modal.addEventListener('click',e=>{if(e.target===modal){const r=modal.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)modal.close()}});
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.10')});
+ navigator.serviceWorker.addEventListener('message',event=>{if(event.data?.type==='GET_APP_VERSION')event.ports[0]?.postMessage('3.4.11')});
  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 }
 render();
