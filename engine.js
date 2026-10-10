@@ -327,7 +327,7 @@ export function replacePairings(t,number,pairs) {
 }
 
 function normaliseForValidation(t) {
-  t.teams ||= []; t.audit ||= []; t.changeLog ||= []; t.roundRobinFormat ||= 'single'; t.pairingMode ||= isSwissSystem(t.system) ? 'flexible' : t.system; t.pairingEngine ||= t.system; t.initialColor ||= 'random'; t.byeScorePolicy ||= 'WIN'; t.requestedByeScorePolicy ||= 'DRAW'; t.boardCount = Math.max(1, Number(t.boardCount || 2)); t.knockoutSeeding ||= 'balanced'; delete t.automaticEloUpdates; delete t.finalRatingsCommit; for(const r of t.rounds)delete r.ratingsBefore; for(const p of t.players)delete p.eloHistory; return t;
+  t.teams ||= []; t.audit ||= []; t.changeLog ||= []; t.roundRobinFormat ||= 'single'; t.pairingMode ||= isSwissSystem(t.system) ? 'flexible' : t.system; t.pairingEngine ||= t.system; t.initialColor ||= 'random'; t.byeScorePolicy ||= 'WIN'; t.requestedByeScorePolicy ||= 'DRAW'; t.boardCount = Math.max(1, Number(t.boardCount || 2)); t.knockoutSeeding ||= 'balanced'; delete t.automaticEloUpdates; delete t.finalRatingsCommit; for(const r of t.rounds)delete r.ratingsBefore; for(const p of t.players){if(p.initialRating!=null)p.rating=Number(p.initialRating);delete p.eloHistory;} return t;
 }
 
 export function validateTournament(value) {
